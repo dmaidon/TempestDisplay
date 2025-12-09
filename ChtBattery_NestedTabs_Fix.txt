@@ -1,0 +1,114 @@
+ChtBattery Fix for Nested Tab Structure - COMPLETE
+===================================================
+
+TAB STRUCTURE:
+--------------
+TC (Main TabControl)
+ └─ TpLogs (TabPage "Logs")
+     └─ TcLogs (Nested TabControl)
+         ├─ TpLogFiles (TabPage "Log Files")
+         └─ TpCharts (TabPage "Charts")
+             └─ ChtBattery (Battery Chart Control)
+
+PROBLEM:
+--------
+The battery chart wasn't initializing because the code was checking 
+the wrong level in the nested tab structure.
+
+Previous (incorrect) check:
+  If current.Name = "TpCharts" Then
+  
+This looked for TpCharts on TC (main control), but TpCharts is 
+actually TWO levels deep - it's on TcLogs, which is on TpLogs!
+
+SOLUTION - TWO EVENT HANDLERS:
+-------------------------------
+
+1. TC_SelectedIndexChanged (Main Tab Control)
+   - Checks when user selects TpLogs on main TC
+   - THEN checks if TcLogs already has TpCharts selected
+   - This handles the case when user switches TO the Logs tab
+     and Charts is already the active nested tab
+
+   Code:
+   If current.Name = "TpLogs" Then
+       If TcLogs.SelectedTab.Name = "TpCharts" Then
+           InitializeBatteryChart()
+       End If
+   End If
+
+2. TcLogs_SelectedIndexChanged (Nested Tab Control) - NEW!
+   - Handles tab switches WITHIN TcLogs
+   - When user is already on TpLogs and switches to TpCharts
+   - This is the handler that will fire most often during use
+
+   Code:
+   If TcLogs.SelectedTab.Name = "TpCharts" Then
+       InitializeBatteryChart()
+   End If
+
+WHY BOTH ARE NEEDED:
+--------------------
+Scenario 1: User starts app, clicks Logs tab
+  - TC_SelectedIndexChanged fires
+  - TpLogs is selected
+  - Code checks if TcLogs has TpCharts selected
+  - If yes, initializes chart
+
+Scenario 2: User is on Logs tab, clicks Charts nested tab
+  - TcLogs_SelectedIndexChanged fires
+  - TpCharts is now selected
+  - Chart initializes
+
+Scenario 3: User is on Logs→Charts, switches to another main tab, 
+            then back to Logs
+  - TC_SelectedIndexChanged fires
+  - Checks nested tab, finds TpCharts still selected
+  - Ensures chart stays initialized
+
+CHANGES MADE:
+-------------
+File: C:\VB18\TempestDisplay\TempestDisplay\FrmMain.vb
+
+1. Modified TC_SelectedIndexChanged (Line ~318):
+   - Changed from checking "TpCharts" to checking "TpLogs"
+   - Added nested check for TcLogs.SelectedTab.Name = "TpCharts"
+   - Updated comments to explain nested structure
+
+2. Added NEW TcLogs_SelectedIndexChanged event handler (Line ~346):
+   - Handles Handles TcLogs.SelectedIndexChanged
+   - Checks if selected tab is TpCharts
+   - Calls InitializeBatteryChart()
+   - Includes proper error handling and logging
+
+TESTING CHECKLIST:
+------------------
+After rebuild, test these scenarios:
+
+✓ Start app → Click Logs tab → Click Charts nested tab
+  Expected: Chart initializes and displays data
+
+✓ Start app → Click Logs tab (Charts already selected by default)
+  Expected: Chart initializes immediately
+
+✓ Switch from Logs→Charts to another tab, then back
+  Expected: Chart remains functional
+
+✓ Switch between Log Files and Charts nested tabs
+  Expected: Chart initializes when Charts is selected
+
+LOG MESSAGES TO LOOK FOR:
+--------------------------
+Success indicators:
+- "[Charts Tab] Entered Charts tab (nested in Logs)..."
+- "[TcLogs] Switched to Charts tab..."
+- "[Battery] Chart initialized successfully"
+- "[Battery] Chart updated with X data points"
+
+FILES MODIFIED:
+---------------
+✓ C:\VB18\TempestDisplay\TempestDisplay\FrmMain.vb
+  - Modified TC_SelectedIndexChanged to check nested structure
+  - Added new TcLogs_SelectedIndexChanged event handler
+
+Ready to rebuild and test!

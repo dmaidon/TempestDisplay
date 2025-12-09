@@ -1,0 +1,8 @@
+<Project>
+  <PropertyGroup>
+    <!-- Workaround MSBuild error in Microsoft.NET.Windows.targets when targeting Windows 10.0.*.1 (CsWinRT 3.0 preview path) -->
+    <CsWinRTGenerateInteropAssembly>false</CsWinRTGenerateInteropAssembly>
+    <!-- Make NuGet package version follow FileVersion -->
+    <PackageVersion>$(FileVersion)</PackageVersion>
+  </PropertyGroup>
+</Project>

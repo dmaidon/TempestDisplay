@@ -1,0 +1,144 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<OutputType>WinExe</OutputType>
+		<TargetFramework>net10.0-windows10.0.22000.0</TargetFramework>
+		<StartupObject>TempestDisplay.My.MyApplication</StartupObject>
+		<UseWindowsForms>true</UseWindowsForms>
+		<MyType>WindowsForms</MyType>
+		<SupportedOSPlatformVersion>10.0.22000.0</SupportedOSPlatformVersion>
+		<AssemblyName>TempestDisplay</AssemblyName>
+		<AssemblyTitle>TempestDisplay</AssemblyTitle>
+		<RootNamespace>TempestDisplay</RootNamespace>
+		<GenerateDocumentationFile>True</GenerateDocumentationFile>
+		<OptionStrict>On</OptionStrict>
+		<Title>Tempest Data - CarolinaWx</Title>
+		<Authors>Dennis N Maidon</Authors>
+		<Company>PAROLE Software</Company>
+		<Copyright>©2025 PAROLE Software</Copyright>
+		<NeutralLanguage>en-US</NeutralLanguage>
+		<AssemblyVersion>25.12.9.651</AssemblyVersion>
+		<FileVersion>25.12.9.651</FileVersion>
+		<Version>$(AssemblyVersion)</Version>
+		<PackageVersion>$(AssemblyVersion)</PackageVersion>
+		<AnalysisLevel>latest</AnalysisLevel>
+		<PackageIcon>weather_128.png</PackageIcon>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+		<OutputPath>C:\VB18\Release\TempestDisplay</OutputPath>
+		<ShouldCreateLogs>True</ShouldCreateLogs>
+		<AdvancedSettingsExpanded>True</AdvancedSettingsExpanded>
+		<UpdateAssemblyVersion>False</UpdateAssemblyVersion>
+		<UpdateAssemblyFileVersion>False</UpdateAssemblyFileVersion>
+		<UpdateAssemblyInfoVersion>False</UpdateAssemblyInfoVersion>
+		<UpdatePackageVersion>False</UpdatePackageVersion>
+		<AssemblyInfoVersionType>SettingsVersion</AssemblyInfoVersionType>
+		<InheritWinAppVersionFrom>AssemblyVersion</InheritWinAppVersionFrom>
+		<PrimaryVersionType>AssemblyVersionAttribute</PrimaryVersionType>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+		<OutputPath>C:\VB18\Release\TempestDisplay</OutputPath>
+		<ShouldCreateLogs>True</ShouldCreateLogs>
+		<AdvancedSettingsExpanded>True</AdvancedSettingsExpanded>
+		<UpdateAssemblyVersion>False</UpdateAssemblyVersion>
+		<UpdateAssemblyFileVersion>False</UpdateAssemblyFileVersion>
+		<UpdateAssemblyInfoVersion>False</UpdateAssemblyInfoVersion>
+		<UpdatePackageVersion>False</UpdatePackageVersion>
+		<AssemblyInfoVersionType>SettingsVersion</AssemblyInfoVersionType>
+		<InheritWinAppVersionFrom>AssemblyVersion</InheritWinAppVersionFrom>
+		<PrimaryVersionType>AssemblyVersionAttribute</PrimaryVersionType>
+	</PropertyGroup>
+
+	<ItemGroup>
+	  <Compile Remove="FrmMain.Partials\FrmMain.UdpListener.EXAMPLE.vb" />
+	  <Compile Remove="FrmMain.Partials\FrmMain.UdpListener.ORIGINAL.BACKUP.vb" />
+	  <Compile Remove="FrmMain.Partials\FrmMain.UdpListener.TEMP.vb" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Remove="Modules\UdpListener\FIREWALL_CONFIG_GUIDE.md" />
+	  <None Remove="Modules\UdpListener\FIREWALL_QUICK_REF.md" />
+	  <None Remove="Modules\UdpListener\INTEGRATION_GUIDE.md" />
+	  <None Remove="Modules\UdpListener\README.md" />
+	  <None Remove="Modules\UdpListener\USAGE_EXAMPLE.txt" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Content Include="weather.ico" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Import Include="System.Data" />
+		<Import Include="System.Drawing" />
+		<Import Include="System.Windows.Forms" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Compile Update="My Project\Application.Designer.vb">
+			<DesignTime>True</DesignTime>
+			<AutoGen>True</AutoGen>
+			<DependentUpon>Application.myapp</DependentUpon>
+		</Compile>
+		<Compile Update="My Project\Resources.Designer.vb">
+		  <DesignTime>True</DesignTime>
+		  <AutoGen>True</AutoGen>
+		  <DependentUpon>Resources.resx</DependentUpon>
+		</Compile>
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Update="My Project\Application.myapp">
+			<Generator>MyApplicationCodeGenerator</Generator>
+			<LastGenOutput>Application.Designer.vb</LastGenOutput>
+		</None>
+		<None Update="Resources\lightning.ico">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="Resources\lightning_128.png">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="Resources\lightning_256.png">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="Resources\lightning_64.png">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="Resources\weather.ico">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="Resources\weather_128.png">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
+
+	<ItemGroup>
+		<Folder Include="Images\" />
+		<Folder Include="AppSettings\" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Include="..\..\..\Users\dmaid\Downloads\weather_128.png">
+	    <Pack>True</Pack>
+	    <PackagePath>\</PackagePath>
+	  </None>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <PackageReference Include="WinForms.DataVisualization" Version="1.10.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <EmbeddedResource Update="My Project\Resources.resx">
+	    <CustomToolNamespace>My.Resources</CustomToolNamespace>
+	    <Generator>VbMyResourcesResXFileCodeGenerator</Generator>
+	    <LastGenOutput>Resources.Designer.vb</LastGenOutput>
+	  </EmbeddedResource>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\TempestDisplay.Common\TempestDisplay.Common.vbproj" />
+	  <ProjectReference Include="..\TempestDisplay.Controls\TempestDisplay.Controls.vbproj" />
+	</ItemGroup>
+</Project>

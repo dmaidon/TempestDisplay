@@ -1,0 +1,64 @@
+ChtBattery Not Displaying After Moving to TpCharts - FIXED
+===========================================================
+
+PROBLEM:
+--------
+After moving ChtBattery from TpSettings tab page to TpCharts tab page, 
+the battery data stopped displaying. The chart appeared but remained empty.
+
+ROOT CAUSE:
+-----------
+The battery chart initialization code was still checking for the old 
+TpSettings tab. In FrmMain.vb's Tc_SelectedIndexChanged event handler,
+the code was:
+
+  If current IsNot Nothing AndAlso current.Name = "TpSettings" Then
+      InitializeBatteryChart()
+  End If
+
+Since ChtBattery is now on TpCharts, this condition was never true,
+so the chart was never initialized!
+
+SOLUTION:
+---------
+Changed the tab check from "TpSettings" to "TpCharts" in THREE locations:
+
+1. FrmMain.vb (Line 320)
+   Before: If current IsNot Nothing AndAlso current.Name = "TpSettings" Then
+   After:  If current IsNot Nothing AndAlso current.Name = "TpCharts" Then
+   
+   Also updated related comments and log messages from "Settings Tab" to "Charts Tab"
+
+2. FrmMain.BatteryChart.vb (Line 34)
+   Updated comment: "Called when Charts tab is first accessed"
+   (was "Called when Settings tab is first accessed")
+
+3. FrmMain.BatteryChart.vb (Line 366)
+   Updated comment about when chart updates occur
+
+HOW IT WORKS NOW:
+-----------------
+1. When you switch to the TpCharts tab, the Tc_SelectedIndexChanged event fires
+2. Code detects current.Name = "TpCharts"
+3. InitializeBatteryChart() is called
+4. Chart is configured with proper axis, series, legend, and title
+5. UpdateBatteryChart() populates it with existing battery history data
+6. Chart displays properly!
+
+TESTING:
+--------
+After rebuilding:
+1. Start the application
+2. Switch to the Charts tab (TpCharts)
+3. Battery chart should now initialize and display data
+4. Logs will show "[Charts Tab] Battery chart initialization completed"
+
+The battery data collection was always working in the background,
+it just wasn't being displayed because the chart wasn't being initialized!
+
+FILES MODIFIED:
+---------------
+✓ C:\VB18\TempestDisplay\TempestDisplay\FrmMain.vb
+✓ C:\VB18\TempestDisplay\TempestDisplay\FrmMain.Partials\FrmMain.BatteryChart.vb
+
+All fixed and ready to rebuild!

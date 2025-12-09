@@ -1,0 +1,127 @@
+''' <summary>
+''' Example: How to use WeatherFlowUdpListener in FrmMain
+''' </summary>
+''' 
+''' 1. Add private field to FrmMain.vb:
+'''    Private _udpListener As WeatherFlowUdpListener
+'''
+''' 2. In FrmMain_Load, start the listener:
+'''    Try
+'''        _udpListener = New WeatherFlowUdpListener()
+'''        AddHandler _udpListener.RapidWindReceived, AddressOf OnRapidWindReceived
+'''        AddHandler _udpListener.ObservationReceived, AddressOf OnObservationReceived
+'''        AddHandler _udpListener.DeviceStatusReceived, AddressOf OnDeviceStatusReceived
+'''        AddHandler _udpListener.HubStatusReceived, AddressOf OnHubStatusReceived
+'''        AddHandler _udpListener.RawMessageReceived, AddressOf OnRawMessageReceived
+'''        _udpListener.StartListening()
+'''        Log.Write("UDP listener started successfully")
+'''    Catch ex As Exception
+'''        Log.WriteException(ex, "Error starting UDP listener")
+'''    End Try
+'''
+''' 3. Add event handlers to FrmMain:
+'''
+'''    Private Sub OnRapidWindReceived(sender As Object, e As RapidWindEventArgs)
+'''        ' Updated every 3 seconds - rapid wind data
+'''        Try
+'''            ' Must marshal to UI thread if updating controls
+'''            If InvokeRequired Then
+'''                Invoke(New Action(Sub()
+'''                    ' Update wind speed and direction controls
+'''                    LblWindSpeed.Text = $"{e.WindSpeed:F1} m/s"
+'''                    LblWindDirection.Text = $"{e.WindDirection}°"
+'''                    Log.Write($"Rapid Wind: {e.WindSpeed:F1} m/s @ {e.WindDirection}°")
+'''                End Sub))
+'''            End If
+'''        Catch ex As Exception
+'''            Log.WriteException(ex, "Error processing rapid wind")
+'''        End Try
+'''    End Sub
+'''
+'''    Private Sub OnObservationReceived(sender As Object, e As ObservationEventArgs)
+'''        ' Updated every minute - full observation data
+'''        Try
+'''            If InvokeRequired Then
+'''                Invoke(New Action(Sub()
+'''                    ' Parse the full observation JSON and update all controls
+'''                    Log.Write($"Observation received: {e.RawJson.Substring(0, Math.Min(100, e.RawJson.Length))}...")
+'''                    ' TODO: Parse obs_st format and update temperature, humidity, pressure, etc.
+'''                End Sub))
+'''            End If
+'''        Catch ex As Exception
+'''            Log.WriteException(ex, "Error processing observation")
+'''        End Try
+'''    End Sub
+'''
+'''    Private Sub OnDeviceStatusReceived(sender As Object, e As DeviceStatusEventArgs)
+'''        ' Device status updates
+'''        Try
+'''            Log.Write("Device status received")
+'''            ' TODO: Parse device status (battery, signal strength, etc.)
+'''        Catch ex As Exception
+'''            Log.WriteException(ex, "Error processing device status")
+'''        End Try
+'''    End Sub
+'''
+'''    Private Sub OnHubStatusReceived(sender As Object, e As HubStatusEventArgs)
+'''        ' Hub status updates
+'''        Try
+'''            Log.Write("Hub status received")
+'''            ' TODO: Parse hub status (uptime, firmware, etc.)
+'''        Catch ex As Exception
+'''            Log.WriteException(ex, "Error processing hub status")
+'''        End Try
+'''    End Sub
+'''
+'''    Private Sub OnRawMessageReceived(sender As Object, e As RawMessageEventArgs)
+'''        ' All messages - useful for debugging
+'''        ' Uncomment to log all UDP messages:
+'''        ' Log.Write($"UDP from {e.RemoteEndPoint.Address}: {e.JsonMessage}")
+'''    End Sub
+'''
+''' 4. In FrmMain_FormClosing, stop the listener:
+'''    Try
+'''        If _udpListener IsNot Nothing Then
+'''            _udpListener.StopListening()
+'''            _udpListener.Dispose()
+'''        End If
+'''    Catch ex As Exception
+'''        Log.WriteException(ex, "Error stopping UDP listener")
+'''    End Try
+'''
+''' 5. FIREWALL CONFIGURATION:
+'''    - Windows Firewall may block UDP port 50222
+'''    - You may need to add an inbound rule for your application
+'''    - Or temporarily disable firewall for testing
+'''
+''' 6. MESSAGE TYPES FROM WEATHERFLOW:
+'''    - rapid_wind: Wind speed/direction every 3 seconds
+'''    - obs_st: Full Tempest observation every minute (temp, humidity, pressure, rain, etc.)
+'''    - obs_air: Air sensor data (legacy devices)
+'''    - obs_sky: Sky sensor data (legacy devices)
+'''    - evt_precip: Rain start event
+'''    - evt_strike: Lightning strike event
+'''    - device_status: Device health/battery status
+'''    - hub_status: Hub uptime/firmware info
+'''
+''' 7. OBSERVATION DATA FORMAT (obs_st):
+'''    Array indices in the observation array:
+'''    [0]  = Epoch timestamp (seconds)
+'''    [1]  = Wind Lull (m/s)
+'''    [2]  = Wind Avg (m/s)
+'''    [3]  = Wind Gust (m/s)
+'''    [4]  = Wind Direction (degrees)
+'''    [5]  = Wind Sample Interval (seconds)
+'''    [6]  = Station Pressure (MB)
+'''    [7]  = Air Temperature (C)
+'''    [8]  = Relative Humidity (%)
+'''    [9]  = Illuminance (lux)
+'''    [10] = UV Index
+'''    [11] = Solar Radiation (W/m²)
+'''    [12] = Rain Accumulation (mm)
+'''    [13] = Precipitation Type (0=none, 1=rain, 2=hail)
+'''    [14] = Lightning Strike Avg Distance (km)
+'''    [15] = Lightning Strike Count
+'''    [16] = Battery (volts)
+'''    [17] = Report Interval (minutes)
+'''
