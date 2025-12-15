@@ -93,6 +93,17 @@
 
             If TgFeelsLike IsNot Nothing Then
                 TgFeelsLike.TempF = CSng(feelsLike)
+
+                ' Set background color based on which feels-like metric is active
+                Dim label = GetFeelsLikeLabel(data.TempF, data.WindAvgMph)
+                Select Case label
+                    Case "Heat Index"
+                        TgFeelsLike.BackColor = Color.MistyRose   ' light red for hot
+                    Case "Wind Chill"
+                        TgFeelsLike.BackColor = Color.LightBlue   ' light blue for cold
+                    Case Else
+                        TgFeelsLike.BackColor = Color.AntiqueWhite ' neutral for comfortable range
+                End Select
             End If
 
             If TgDewpoint IsNot Nothing Then

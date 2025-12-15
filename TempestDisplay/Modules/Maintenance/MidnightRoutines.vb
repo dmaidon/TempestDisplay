@@ -47,7 +47,7 @@
             Try
                 Log.Write("PerformMidnightUpdate: Fetching yesterday's rain total...")
                 ' Synchronous wait for the async method (we're already in a background thread)
-                Dim rainData = TempestDataRoutines.FetchRainDataAsync(fetchYesterday:=True).GetAwaiter().GetResult()
+                Dim rainData = TempestDataRoutines.FetchRainDataAsync().GetAwaiter().GetResult()
                 Log.Write($"PerformMidnightUpdate: Yesterday's rain cached: {rainData.YesterdayAccum:F2} inches")
             Catch ex As Exception
                 Log.WriteException(ex, "PerformMidnightUpdate: Error fetching yesterday's rain")

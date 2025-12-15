@@ -256,6 +256,36 @@ Partial Public Class FrmMain
             ' Update all UI controls
             UpdateWeatherUI(data, jsonData)
 
+            ' Track hi/lo data in SQLite
+            Try
+                Dim feels = CalculateFeelsLike(data.TempF, data.Humidity, data.WindAvgMph)
+                Dim heatIndex = CalculateHeatIndex(data.TempF, data.Humidity)
+                Dim windChill = CalculateWindChill(data.TempF, data.WindAvgMph)
+
+                ' Rain totals in inches: Today from UDP, Month/Year from MeteoBridge cache if available
+                Dim rainDayIn As Double = data.RainInches
+                Dim rainMonthIn As Double? = Nothing
+                Dim rainYearIn As Double? = Nothing
+
+                Dim cachedRain = Await TempestDataRoutines.FetchRainDataAsync().ConfigureAwait(False)
+                rainMonthIn = cachedRain.MonthAccum
+                rainYearIn = cachedRain.YearAccum
+
+                HiLoDatabase.UpdateDailyHiLo(
+                    data.TimestampDateTime,
+                    data.TempF,
+                    feels,
+                    heatIndex,
+                    windChill,
+                    rainDayIn,
+                    rainMonthIn,
+                    rainYearIn,
+                    data.WindAvgMph,
+                    data.WindDirection)
+            Catch ex As Exception
+                Log.WriteException(ex, "[HiLo] Error updating daily hi/lo from UDP observation")
+            End Try
+
             ' Update rain gauges (async operation)
             Try
                 If PTC IsNot Nothing Then
@@ -275,13 +305,12 @@ Partial Public Class FrmMain
 
     Private Async Function UpdateRainGaugesAsync() As Task
         Try
-            Dim fetchYesterday As Boolean = Not _firstObservationReceived
-            If fetchYesterday Then
+            If Not _firstObservationReceived Then
                 _firstObservationReceived = True
-                Log.Write("[UDP] First observation - fetching yesterday's rain")
+                Log.Write("[UDP] First observation - fetching rain data")
             End If
 
-            Dim rainData = Await TempestDataRoutines.FetchRainDataAsync(fetchYesterday).ConfigureAwait(False)
+            Dim rainData = Await TempestDataRoutines.FetchRainDataAsync().ConfigureAwait(False)
 
             Dim precipValues As Single() = {
                 rainData.TodayAccum,

@@ -1,5 +1,7 @@
 <Solution>
-  <Project Path="TempestDisplay.Common/TempestDisplay.Common.vbproj" />
+  <Project Path="TempestDisplay.Common/TempestDisplay.Common.vbproj">
+    <BuildDependency Project="TempestDisplay.Controls/TempestDisplay.Controls.vbproj" />
+  </Project>
   <Project Path="TempestDisplay.Controls/TempestDisplay.Controls.vbproj" />
   <Project Path="TempestDisplay/TempestDisplay.vbproj" />
 </Solution>

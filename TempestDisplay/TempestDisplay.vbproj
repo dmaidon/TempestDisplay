@@ -17,8 +17,8 @@
 		<Company>PAROLE Software</Company>
 		<Copyright>©2025 PAROLE Software</Copyright>
 		<NeutralLanguage>en-US</NeutralLanguage>
-		<AssemblyVersion>25.12.9.651</AssemblyVersion>
-		<FileVersion>25.12.9.651</FileVersion>
+		<AssemblyVersion>25.12.15.665</AssemblyVersion>
+		<FileVersion>25.12.15.665</FileVersion>
 		<Version>$(AssemblyVersion)</Version>
 		<PackageVersion>$(AssemblyVersion)</PackageVersion>
 		<AnalysisLevel>latest</AnalysisLevel>
@@ -126,6 +126,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <PackageReference Include="System.Data.SQLite.Core" Version="1.0.119" />
 	  <PackageReference Include="WinForms.DataVisualization" Version="1.10.0" />
 	</ItemGroup>
 

@@ -16,20 +16,25 @@
             If currentTime >= _nextMidnight Then
                 Log.Write($"[TmrClock_Tick] Midnight reached, performing midnight update...")
 
-                Try
-                    ' Perform midnight maintenance
-                    PerformMidnightUpdate()
+                ' Reset midnight tracking FIRST (before async operation starts)
+                ' This ensures timer continues ticking even if maintenance takes time
+                _lastMidnightCheck = currentTime
+                _nextMidnight = CalculateNextMidnight()
+                Log.Write($"[TmrClock_Tick] Next midnight: {_nextMidnight:yyyy-MM-dd HH:mm:ss}")
 
-                    ' Reset midnight tracking
-                    _lastMidnightCheck = currentTime
-                    _nextMidnight = CalculateNextMidnight()
-                    Log.Write($"[TmrClock_Tick] Midnight update complete. Next midnight: {_nextMidnight:yyyy-MM-dd HH:mm:ss}")
+                ' Update display immediately (prevents "Midnight!" from getting stuck)
+                UpdateMidnightCountdown()
 
-                    ' Update display immediately after midnight reset
-                    UpdateMidnightCountdown()
-                Catch ex As Exception
-                    Log.WriteException(ex, "[TmrClock_Tick] Error in PerformMidnightUpdate")
-                End Try
+                ' Perform midnight maintenance on background thread (fire-and-forget)
+                ' This prevents blocking the UI thread and causing deadlock
+                Task.Run(Sub()
+                    Try
+                        PerformMidnightUpdate()
+                        Log.Write("[TmrClock_Tick] Midnight update complete")
+                    Catch ex As Exception
+                        Log.WriteException(ex, "[TmrClock_Tick] Error in PerformMidnightUpdate")
+                    End Try
+                End Sub)
             End If
         Catch ex As Exception
             Log.WriteException(ex, "Error in TmrClock_Tick")

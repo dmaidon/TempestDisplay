@@ -31,15 +31,16 @@ Public Class FrmMain
         UdpLogService.Instance.Init()
 
         Try
-            Text = Application.ProductName
-            TsslVer.Text = Application.ProductVersion
+            Text = System.Windows.Forms.Application.ProductName
+            Dim ver = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version
+            TsslVer.Text = $"{ver.Major}.{ver.Minor}.{ver.Build}.{ver.Revision}"
             TsslCpy.Text = Cpy
             TsslTimesrun.Text = Globals.AppStarts.ToString
 
             ' Load lightning icon from Resources folder
-            Dim iconPath = Path.Combine(Application.StartupPath, "Resources", "lightning_64.png")
+            Dim iconPath = Path.Combine(System.Windows.Forms.Application.StartupPath, "Resources", "lightning_64.png")
             If File.Exists(iconPath) Then
-                Using img = Image.FromFile(iconPath)
+                Using img = Drawing.Image.FromFile(iconPath)
                     ' Create a 16x16 version for the label
                     LblLightningDataTitle.Image = New Bitmap(img, New Size(16, 16))
                 End Using
@@ -72,6 +73,13 @@ Public Class FrmMain
             Log.WriteException(ex, "Failed to initialize UDP listener, will use REST API fallback")
         End Try
 
+        ' Ensure HiLo database exists
+        Try
+            HiLoDatabase.EnsureHiLoDatabase()
+        Catch ex As Exception
+            Log.WriteException(ex, "Failed to initialize HiLo database")
+        End Try
+
         ' Initialize battery history file and load data (chart will be initialized when Settings tab is accessed)
         Try
             InitializeBatteryHistoryFile()
@@ -92,193 +100,13 @@ Public Class FrmMain
         Log.Write("FrmMain_Load: Exited")
     End Sub
 
-    Private Sub InitializeCustomcontrols()
-        Try
-            ' Temperature gauges
-            If TgCurrentTemp IsNot Nothing Then
-                TgCurrentTemp.Label = "Current Temperature"
-                TgCurrentTemp.BackColor = Color.AntiqueWhite
-                TgCurrentTemp.Font = New Font(TgCurrentTemp.Font, FontStyle.Bold)
-            Else
-                ' Create TgCurrentTemp control dynamically if it doesn't exist
-                Log.Write("TgCurrentTemp control is Nothing - creating dynamically")
-                Try
-                    If TlpData IsNot Nothing Then
-                        TgCurrentTemp = New Controls.TempGaugeControl With {
-                            .Label = "Current Temperature",
-                            .BackColor = Color.AntiqueWhite,
-                            .Dock = DockStyle.Fill
-                        }
-                        TgCurrentTemp.Font = New Font(TgCurrentTemp.Font, FontStyle.Bold)
-
-                        ' Add to TableLayoutPanel at column 0, row 0 with column span of 2
-                        TlpData.Controls.Add(TgCurrentTemp, 0, 0)
-                        TlpData.SetColumnSpan(TgCurrentTemp, 2)
-
-                        Log.Write("TgCurrentTemp control created and added to TlpData[0,0] with ColumnSpan=2")
-                    Else
-                        Log.Write("WARNING: TlpData is Nothing - cannot add TgCurrentTemp")
-                    End If
-                Catch ex As Exception
-                    Log.WriteException(ex, "Error creating TgCurrentTemp control dynamically")
-                End Try
-            End If
-
-            If TgFeelsLike IsNot Nothing Then
-                TgFeelsLike.Label = "Feels Like"
-                TgFeelsLike.BackColor = Color.AntiqueWhite
-                TgFeelsLike.Font = New Font(TgFeelsLike.Font, FontStyle.Bold)
-            Else
-                ' Create TgFeelsLike control dynamically if it doesn't exist
-                Log.Write("TgFeelsLike control is Nothing - creating dynamically")
-                Try
-                    If TlpData IsNot Nothing Then
-                        TgFeelsLike = New Controls.TempGaugeControl With {
-                            .Label = "Feels Like",
-                            .BackColor = Color.AntiqueWhite,
-                            .Dock = DockStyle.Fill
-                        }
-                        TgFeelsLike.Font = New Font(TgFeelsLike.Font, FontStyle.Bold)
-
-                        ' Add to TableLayoutPanel at column 0, row 1 with column span of 2
-                        TlpData.Controls.Add(TgFeelsLike, 0, 1)
-                        TlpData.SetColumnSpan(TgFeelsLike, 2)
-
-                        Log.Write("TgFeelsLike control created and added to TlpData[0,1] with ColumnSpan=2")
-                    Else
-                        Log.Write("WARNING: TlpData is Nothing - cannot add TgFeelsLike")
-                    End If
-                Catch ex As Exception
-                    Log.WriteException(ex, "Error creating TgFeelsLike control dynamically")
-                End Try
-            End If
-
-            If TgDewpoint IsNot Nothing Then
-                TgDewpoint.Label = "Dew Point"
-                TgDewpoint.BackColor = Color.AntiqueWhite
-                TgDewpoint.Font = New Font(TgDewpoint.Font, FontStyle.Bold)
-            Else
-                ' Create TgDewpoint control dynamically if it doesn't exist
-                Log.Write("TgDewpoint control is Nothing - creating dynamically")
-                Try
-                    If TlpData IsNot Nothing Then
-                        TgDewpoint = New Controls.TempGaugeControl With {
-                            .Label = "Dew Point",
-                            .BackColor = Color.AntiqueWhite,
-                            .Dock = DockStyle.Fill
-                        }
-                        TgDewpoint.Font = New Font(TgDewpoint.Font, FontStyle.Bold)
-
-                        ' Add to TableLayoutPanel at column 0, row 2 with column span of 2
-                        TlpData.Controls.Add(TgDewpoint, 0, 2)
-                        TlpData.SetColumnSpan(TgDewpoint, 2)
-
-                        Log.Write("TgDewpoint control created and added to TlpData[0,2] with ColumnSpan=2")
-                    Else
-                        Log.Write("WARNING: TlpData is Nothing - cannot add TgDewpoint")
-                    End If
-                Catch ex As Exception
-                    Log.WriteException(ex, "Error creating TgDewpoint control dynamically")
-                End Try
-            End If
-
-            ' Humidity gauge
-            If FgRH IsNot Nothing Then
-                FgRH.Label = "Relative Humidity"
-                FgRH.BackColor = Color.AntiqueWhite
-                FgRH.Font = New Font(FgRH.Font, FontStyle.Bold)
-            Else
-                ' Create FgRH control dynamically if it doesn't exist
-                Log.Write("FgRH control is Nothing - creating dynamically")
-                Try
-                    If TlpData IsNot Nothing Then
-                        FgRH = New Controls.FanGaugeControl With {
-                            .Label = "Relative Humidity",
-                            .BackColor = Color.AntiqueWhite,
-                            .Dock = DockStyle.Fill
-                        }
-                        FgRH.Font = New Font(FgRH.Font, FontStyle.Bold)
-
-                        ' Add to TableLayoutPanel at column 0, row 3 with column span of 2
-                        TlpData.Controls.Add(FgRH, 2, 0)
-                        TlpData.SetColumnSpan(FgRH, 2)
-
-                        Log.Write("FgRH control created and added to TlpData[2,0] with ColumnSpan=2")
-                    Else
-                        Log.Write("WARNING: TlpData is Nothing - cannot add FgRH")
-                    End If
-                Catch ex As Exception
-                    Log.WriteException(ex, "Error creating FgRH control dynamically")
-                End Try
-            End If
-
-            ' Precipitation control
-            If PTC IsNot Nothing Then
-                PTC.BackColor = Color.AntiqueWhite
-                PTC.Font = New Font("Arial", 7.75, FontStyle.Bold)
-            Else
-                ' Create PTC control dynamically if it doesn't exist
-                Log.Write("PTC control is Nothing - creating dynamically")
-                Try
-                    If TlpData IsNot Nothing Then
-                        PTC = New Controls.PrecipTowersControl With {
-                            .BackColor = Color.AntiqueWhite,
-                            .Dock = DockStyle.Fill
-                        }
-                        PTC.Font = New Font(PTC.Font.FontFamily, 8, FontStyle.Bold)
-
-                        ' Add to TableLayoutPanel at column 0, row 4 with column span of 2
-                        TlpData.Controls.Add(PTC, 6, 0)
-                        TlpData.SetColumnSpan(PTC, 2)
-
-                        Log.Write("PTC control created and added to TlpData[6,0] with ColumnSpan=2")
-                    Else
-                        Log.Write("WARNING: TlpData is Nothing - cannot add PTC")
-                    End If
-                Catch ex As Exception
-                    Log.WriteException(ex, "Error creating PTC control dynamically")
-                End Try
-            End If
-
-            If WrWindSpeed IsNot Nothing Then
-                WrWindSpeed.BackColor = Color.AntiqueWhite
-                WrWindSpeed.Font = New Font(WrWindSpeed.Font, FontStyle.Bold)
-                WrWindSpeed.Label = "Wind"
-            Else
-                Log.Write("WrWindSpeed control is Nothing - creating dynamically")
-                Try
-                    If TlpData IsNot Nothing Then
-                        WrWindSpeed = New Controls.WindRoseControl With {
-                            .BackColor = Color.AntiqueWhite,
-                            .Dock = DockStyle.Fill,
-                            .Label = "Wind"
-                        }
-                        WrWindSpeed.Font = New Font(WrWindSpeed.Font.FontFamily, 8, FontStyle.Bold)
-                        ' Add to TableLayoutPanel at column 4, row 2 with column span of 2
-                        TlpData.Controls.Add(WrWindSpeed, 4, 2)
-                        TlpData.SetColumnSpan(WrWindSpeed, 2)
-                        Log.Write("WrWindSpeed control created and added to TlpData[4,2] with ColumnSpan=2")
-                    Else
-                        Log.Write("WARNING: TlpData is Nothing - cannot add WrWindSpeed")
-                    End If
-                Catch ex As Exception
-                    Log.WriteException(ex, "Error creating WrWindSpeed control dynamically")
-                End Try
-            End If
-
-            Log.Write("Initialized custom controls.")
-        Catch ex As Exception
-            Log.WriteException(ex, "Failed to initialize custom controls")
-        End Try
-    End Sub
-
     Private Async Sub Tc_SelectedIndexChanged(sender As Object, e As EventArgs) Handles Tc.SelectedIndexChanged
         ' Capture all control values BEFORE any Await to avoid cross-thread issues
         Dim currentTabName As String = If(Tc.SelectedTab?.Name, "(unknown)")
         Dim current As TabPage = Tc.SelectedTab
         Dim previousTabName As String = If(_previousTab?.Name, "")
 
-        Log.Write("Tab changed: " & currentTabName)
+        Log.Write($"Tab changed: {currentTabName} (checking for TpRecords)")
 
         Try
             If current IsNot Nothing AndAlso current.Name = "TpLogs" Then
@@ -339,6 +167,20 @@ Public Class FrmMain
                 Catch ex As Exception
                     Log.WriteException(ex, "Error setting RtbUdp text.")
                 End Try
+            End If
+
+            ' Load HiLo records when Records tab is accessed
+            Log.Write($"[DEBUG] Checking Records tab: current IsNot Nothing = {current IsNot Nothing}, Name = '{current?.Name}'")
+            If current IsNot Nothing AndAlso current.Name = "TpRecords" Then
+                Log.Write("[Records Tab] Entered Records tab, loading HiLo records")
+                Try
+                    LoadHiLoRecords()
+                    Log.Write("[Records Tab] HiLo records loaded successfully")
+                Catch ex As Exception
+                    Log.WriteException(ex, "[Records Tab] Error loading HiLo records")
+                End Try
+            Else
+                Log.Write($"[DEBUG] Not Records tab - Name comparison failed: '{current?.Name}' vs 'TpRecords'")
             End If
 
             ' Initialize battery chart when Charts tab is first accessed

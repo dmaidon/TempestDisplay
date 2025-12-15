@@ -9,18 +9,6 @@ Friend Module TempestDataRoutines
 
     Friend Property LastTempestData As TempestModel
 
-    '''' <summary>
-    '''' Get update interval in minutes from settings (used for cache management)
-    '''' </summary>
-    'Private Function GetTempestUpdateIntervalMinutes() As Integer
-    '    Dim settings = LoadSettings()
-    '    Dim seconds As Integer = 300 ' Default to 5 min if missing
-    '    If settings IsNot Nothing AndAlso settings.Tempest IsNot Nothing AndAlso settings.Tempest.UpdateIntervalSeconds > 0 Then
-    '        seconds = settings.Tempest.UpdateIntervalSeconds
-    '    End If
-    '    Return Math.Max(1, CInt(Math.Round(seconds / 60.0)))
-    'End Function
-
     ''' <summary>
     ''' Write station data to UI controls
     ''' Called by REST API (legacy) or can be used for other purposes
@@ -340,23 +328,17 @@ Friend Module TempestDataRoutines
     ''' Fetch rain accumulation data from MeteoBridge
     ''' Used by both WriteStationData and UDP listener
     ''' Includes retry logic - will attempt each query up to MaxRetries times before defaulting to 0.0
+    ''' Yesterday's rain data is always included automatically
     ''' </summary>
-    Friend Async Function FetchRainDataAsync(Optional fetchYesterday As Boolean = False) As Task(Of RainAccumData)
+    Friend Async Function FetchRainDataAsync() As Task(Of RainAccumData)
         ' Check cache first
         If _rainDataCache.HasValue Then
             Dim cacheAge = (DateTime.UtcNow - _rainDataCacheTime).TotalMinutes
             If cacheAge < _rainCacheTtlMinutes Then
                 Log.Write($"[FetchRainDataAsync] Using cached rain data (age: {cacheAge:F1} minutes)")
-                Dim cached = _rainDataCache.Value
-                cached.YesterdayAccum = _yesterdayRainCache
-                Return cached
+                Return _rainDataCache.Value
             End If
         End If
-
-        ' Check if we need to fetch yesterday's rain
-        Dim shouldFetchYesterday As Boolean = fetchYesterday OrElse
-                                              _yesterdayRainCacheTime = DateTime.MinValue OrElse
-                                              (DateTime.UtcNow - _yesterdayRainCacheTime).TotalHours > 24
 
         Dim result As New RainAccumData With {
             .TodayAccum = 0.0F,
@@ -367,13 +349,9 @@ Friend Module TempestDataRoutines
         }
 
         Try
-            If shouldFetchYesterday Then
-                Log.Write($"[FetchRainDataAsync] Starting rain data fetch (including yesterday) with {MaxRetries} max retries")
-            Else
-                Log.Write($"[FetchRainDataAsync] Starting rain data fetch (yesterday cached) with {MaxRetries} max retries")
-            End If
+            Log.Write($"[FetchRainDataAsync] Starting rain data fetch with {MaxRetries} max retries")
 
-            Dim queries = CreateRainQueries(shouldFetchYesterday)
+            Dim queries = CreateRainQueries()
 
             Log.Write($"[FetchRainDataAsync] Fetching {queries.Count} rain queries")
             For Each kvp In queries
@@ -424,12 +402,6 @@ Friend Module TempestDataRoutines
                 End Select
             Next
 
-            ' If we didn't fetch yesterday, use cached value
-            If Not shouldFetchYesterday Then
-                result.YesterdayAccum = _yesterdayRainCache
-                Log.Write($"[FetchRainDataAsync] Using cached yesterday value: {_yesterdayRainCache}")
-            End If
-
             Log.Write($"[FetchRainDataAsync] Final results - Today: {result.TodayAccum}, AllTime: {result.AllTimeAccum}, Year: {result.YearAccum}, Month: {result.MonthAccum}, Yesterday: {result.YesterdayAccum}")
             Log.Write($"[FetchRainDataAsync] Summary - Success: {successCount}, Failed: {failureCount}")
 
@@ -448,19 +420,15 @@ Friend Module TempestDataRoutines
         Return result
     End Function
 
-    Private Function CreateRainQueries(Optional includeYesterday As Boolean = False) As Dictionary(Of String, String)
-        Dim queries = New Dictionary(Of String, String) From {
+    Private Function CreateRainQueries() As Dictionary(Of String, String)
+        ' Yesterday's rain is always included - it's static data that only changes at midnight
+        Return New Dictionary(Of String, String) From {
             {"Today", "rain0total-daysum=In.2:*"},
             {"AllTime", "rain0total-allsum=In.2:*"},
             {"Year", "rain0total-yearsum=In.2:*"},
-            {"Month", "rain0total-monthsum=In.2:*"}
+            {"Month", "rain0total-monthsum=In.2:*"},
+            {"Yesterday", "rain0total-ydaysum=In.2:*"}
         }
-
-        If includeYesterday Then
-            queries.Add("Yesterday", "rain0total-ydaysum=In.2:*")
-        End If
-
-        Return queries
     End Function
 
 End Module

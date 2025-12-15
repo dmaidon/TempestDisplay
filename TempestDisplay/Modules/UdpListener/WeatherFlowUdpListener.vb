@@ -14,15 +14,21 @@ Public Class WeatherFlowUdpListener
     Private _udpClient As UdpClient
     Private _isListening As Boolean = False
     Private _listenerTask As Task
-    Private _cancellationTokenSource As CancellationTokenSource
+    Private ReadOnly _cancellationTokenSource As CancellationTokenSource
 
     ' Events for different message types
     Public Event RapidWindReceived As EventHandler(Of RapidWindEventArgs)
+
     Public Event ObservationReceived As EventHandler(Of ObservationEventArgs)
+
     Public Event DeviceStatusReceived As EventHandler(Of DeviceStatusEventArgs)
+
     Public Event HubStatusReceived As EventHandler(Of HubStatusEventArgs)
+
     Public Event RainStartReceived As EventHandler(Of RainStartEventArgs)
+
     Public Event LightningStrikeReceived As EventHandler(Of LightningStrikeEventArgs)
+
     Public Event RawMessageReceived As EventHandler(Of RawMessageEventArgs)
 
     Public Sub New()
@@ -48,7 +54,6 @@ Public Class WeatherFlowUdpListener
             _listenerTask = Task.Run(AddressOf ListenForMessagesAsync, _cancellationTokenSource.Token)
 
             Log.Write($"WeatherFlowUdpListener: Started listening on UDP port {UDP_PORT}")
-
         Catch ex As Exception
             _isListening = False
             Log.WriteException(ex, "WeatherFlowUdpListener: Error starting UDP listener")
@@ -81,14 +86,13 @@ Public Class WeatherFlowUdpListener
             End If
 
             Log.Write("WeatherFlowUdpListener: Stopped listening")
-
         Catch ex As Exception
             Log.WriteException(ex, "WeatherFlowUdpListener: Error stopping UDP listener")
         End Try
     End Sub
 
     Private Async Function ListenForMessagesAsync() As Task
-        Dim remoteEP As IPEndPoint = Nothing
+        Dim remoteEP As IPEndPoint ' = Nothing
 
         Try
             While _isListening AndAlso Not _cancellationTokenSource.Token.IsCancellationRequested
@@ -106,7 +110,6 @@ Public Class WeatherFlowUdpListener
 
                     ' Parse and route the message
                     ParseAndRouteMessage(jsonMessage, remoteEP)
-
                 Catch ex As ObjectDisposedException
                     ' UDP client was disposed, exit loop
                     Exit While
@@ -121,7 +124,6 @@ Public Class WeatherFlowUdpListener
                     Log.WriteException(ex, "WeatherFlowUdpListener: Error receiving UDP message")
                 End Try
             End While
-
         Catch ex As Exception
             Log.WriteException(ex, "WeatherFlowUdpListener: Fatal error in listener loop")
         Finally
@@ -173,7 +175,6 @@ Public Class WeatherFlowUdpListener
                     End Select
                 End If
             End Using
-
         Catch ex As JsonException
             Log.WriteException(ex, $"WeatherFlowUdpListener: JSON parse error from {remoteEP.Address}")
         Catch ex As Exception
@@ -307,4 +308,3 @@ Public Class WeatherFlowUdpListener
     End Sub
 
 End Class
-

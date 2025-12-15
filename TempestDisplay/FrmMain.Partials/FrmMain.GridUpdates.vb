@@ -194,4 +194,89 @@ Partial Public Class FrmMain
         End Try
     End Sub
 
+    ''' <summary>
+    ''' Create and initialize the Records DataGridView on TpRecords
+    ''' </summary>
+    Private Sub CreateRecordsGrid()
+        If DgvRecords Is Nothing Then
+            Return
+        End If
+
+        With DgvRecords
+            .Columns.Clear()
+            .AutoGenerateColumns = False
+            .AllowUserToAddRows = False
+            .AllowUserToDeleteRows = False
+            .ReadOnly = True
+            .SelectionMode = DataGridViewSelectionMode.FullRowSelect
+            .MultiSelect = False
+
+            ' Example layout – change to match your schema
+            .Columns.Add("DateTime", "Date / Time")
+            .Columns("DateTime").Width = 140
+
+            .Columns.Add("Parameter", "Parameter")
+            .Columns("Parameter").Width = 120
+
+            .Columns.Add("Value", "Value")
+            .Columns("Value").Width = 80
+
+            .Columns.Add("Units", "Units")
+            .Columns("Units").Width = 60
+
+            .Columns.Add("Source", "Source")
+            .Columns("Source").Width = 100
+
+            .Rows.Clear()
+            .Refresh()
+        End With
+    End Sub
+
+    ''' <summary>
+    ''' Record DTO for binding to DgvRecords.
+    ''' Replace/align with your actual record structure or HiLo model.
+    ''' </summary>
+    Private Class DisplayRecord
+        Public Property DateTime As DateTime
+        Public Property Parameter As String
+        Public Property Value As String
+        Public Property Units As String
+        Public Property Source As String
+    End Class
+
+    ''' <summary>
+    ''' Populate DgvRecords with the current collection of records.
+    ''' Call this after you load or recalc records (e.g. from HiLoDatabase).
+    ''' </summary>
+    Private Sub UpdateRecordsGrid(records As IEnumerable(Of DisplayRecord))
+        Try
+            If DgvRecords Is Nothing Then
+                Return
+            End If
+
+            ' Ensure grid is configured
+            If DgvRecords.Columns.Count = 0 Then
+                CreateRecordsGrid()
+            End If
+
+            DgvRecords.Rows.Clear()
+
+            For Each r In records
+                DgvRecords.Rows.Add(
+                    r.DateTime.ToString("yyyy-MM-dd HH:mm"),
+                    r.Parameter,
+                    r.Value,
+                    r.Units,
+                    r.Source)
+            Next
+
+            DgvRecords.ClearSelection()
+            DgvRecords.Refresh()
+
+            Log.Write($"[Grid] DgvRecords updated with {DgvRecords.Rows.Count} rows")
+        Catch ex As Exception
+            Log.WriteException(ex, "[Grid] Error updating DgvRecords")
+        End Try
+    End Sub
+
 End Class

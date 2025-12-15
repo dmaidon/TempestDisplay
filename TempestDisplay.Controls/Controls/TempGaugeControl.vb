@@ -11,11 +11,8 @@ Public Class TempGaugeControl
     Private _tempF As Single
     Private _tempC As Single
     Private _label As String = ""
-
-    ' Ranges
-    Private Const MinF As Single = -5
-
-    Private Const MaxF As Single = 110
+    Private _minF As Single = -5
+    Private _maxF As Single = 110
 
     <Browsable(True)>
     <Category("Data")>
@@ -54,6 +51,32 @@ Public Class TempGaugeControl
         End Get
         Set(value As String)
             _label = value
+            Invalidate()
+        End Set
+    End Property
+
+    <Browsable(True)>
+    <Category("Data")>
+    <DefaultValue(-5.0F)>
+    Public Property MinF As Single
+        Get
+            Return _minF
+        End Get
+        Set(value As Single)
+            _minF = value
+            Invalidate()
+        End Set
+    End Property
+
+    <Browsable(True)>
+    <Category("Data")>
+    <DefaultValue(110.0F)>
+    Public Property MaxF As Single
+        Get
+            Return _maxF
+        End Get
+        Set(value As Single)
+            _maxF = value
             Invalidate()
         End Set
     End Property
@@ -108,22 +131,22 @@ Public Class TempGaugeControl
         DrawGradientArc(g, cx, cy, outerRadius, ringOuter, startAngle, sweepAngle)
 
         ' Draw minor ticks (Fahrenheit only, inside arc)
-        DrawMinorTicks(g, cx, cy, outerRadius - ringOuter * 2, ringOuter, MinF, MaxF, 5, 15, Color.FromArgb(80, 80, 80), startAngle, sweepAngle)
+        DrawMinorTicks(g, cx, cy, outerRadius - ringOuter * 2, ringOuter, _minF, _maxF, 5, 15, Color.FromArgb(80, 80, 80), startAngle, sweepAngle)
 
         ' Draw scale ticks and labels (Fahrenheit only, inside arc)
-        DrawScaleTicks(g, cx, cy, outerRadius - ringOuter * 2, ringOuter, MinF, MaxF, 15, Color.FromArgb(30, 105, 210), startAngle, sweepAngle)
+        DrawScaleTicks(g, cx, cy, outerRadius - ringOuter * 2, ringOuter, _minF, _maxF, 15, Color.FromArgb(30, 105, 210), startAngle, sweepAngle)
 
         ' Single black needle with shadow (outer geometry)
-        DrawPointer(g, cx, cy, outerRadius, TempF, MinF, MaxF, Color.FromArgb(40, 40, 40), ringOuter, startAngle, sweepAngle)
+        DrawPointer(g, cx, cy, outerRadius, TempF, _minF, _maxF, Color.FromArgb(40, 40, 40), ringOuter, startAngle, sweepAngle)
 
         ' small dot on arc with glow (Fahrenheit only)
-        DrawPointOnArc(g, cx, cy, outerRadius, ringOuter, TempF, MinF, MaxF, Color.FromArgb(30, 105, 210), startAngle, sweepAngle)
+        DrawPointOnArc(g, cx, cy, outerRadius, ringOuter, TempF, _minF, _maxF, Color.FromArgb(30, 105, 210), startAngle, sweepAngle)
 
         ' center text (F and C)
         DrawCenterText(g, cx, cy, TempF, TempC)
 
         ' Draw special tick at 32°F (outside the ring, IndianRed)
-        DrawSpecialTick(g, cx, cy, outerRadius, ringOuter, 32.0F, MinF, MaxF, startAngle, sweepAngle)
+        DrawSpecialTick(g, cx, cy, outerRadius, ringOuter, 32.0F, _minF, _maxF, startAngle, sweepAngle)
 
         ' Glass overlay for final professional touch
         DrawGlassOverlay(g, cx, cy, outerRadius)
