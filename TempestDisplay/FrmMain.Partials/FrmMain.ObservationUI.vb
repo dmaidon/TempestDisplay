@@ -78,6 +78,8 @@
         End Try
     End Sub
 
+    Private Shared ReadOnly separator As Char() = {","c}
+
     Private Sub UpdateSunriseSunsetPanel()
         Try
             If SunriseSunset Is Nothing Then Return
@@ -87,15 +89,17 @@
                 ' No coordinates provided; skip fetch
                 Exit Sub
             End If
-            Dim parts = coords.Split({","c}, StringSplitOptions.RemoveEmptyEntries)
+            Dim parts = coords.Split(separator, StringSplitOptions.RemoveEmptyEntries)
             If parts.Length <> 2 Then Exit Sub
-            Dim lat As Double
-            Dim lng As Double
-            If Not Double.TryParse(parts(0).Trim(), lat) Then Exit Sub
-            If Not Double.TryParse(parts(1).Trim(), lng) Then Exit Sub
+            'Dim lat As Double
+            'Dim lng As Double
+            If Not Double.TryParse(parts(0).Trim(), Lat) Then Exit Sub
+            If Not Double.TryParse(parts(1).Trim(), Lng) Then Exit Sub
+
+            Dim tz As String = TimeZone
 
             ' Fire and forget: start task and ignore the result
-            Dim _task = SunriseSunset.FetchAndUpdateAsync(lat, lng)
+            Dim _task = SunriseSunset.FetchAndUpdateAsync(Lat, Lng, tz)
         Catch ex As Exception
             Log.WriteException(ex, "[UI] Error updating SunriseSunset panel")
         End Try

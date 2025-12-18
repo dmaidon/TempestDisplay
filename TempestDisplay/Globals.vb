@@ -39,4 +39,8 @@ Friend Module Globals
 
     Friend ReadOnly nl As String = Environment.NewLine
 
+    Friend ReadOnly Lat As Double = 35.625556
+    Friend ReadOnly Lng As Double = -78.328611
+    Friend ReadOnly TimeZone As String = "America/New_York"
+
 End Module

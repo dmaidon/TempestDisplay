@@ -15,6 +15,13 @@ Public Class SunriseSunsetPanel
     Private ReadOnly _lblDayLength As New Label()
     Private ReadOnly _lblUntilSunrise As New Label()
 
+    'Private ReadOnly Lat As Double = 35.625556
+    'Private ReadOnly Lng As Double = -78.328611
+
+    ' Optional target time zone for displaying times (Windows ID or common IANA like "America/New_York")
+    <Browsable(True), DesignerSerializationVisibility(DesignerSerializationVisibility.Visible), DefaultValue("")>
+    Public Property TargetTimeZoneId As String
+
     ' Gutter to preserve the TableLayoutPanel cell border and visual separation
     Private Const RightBoundaryGutter As Integer = 4
 
@@ -74,9 +81,8 @@ Public Class SunriseSunsetPanel
         End Using
     End Sub
 
-    Public Async Function FetchAndUpdateAsync(latitude As Double, longitude As Double, Optional dateParam As String = "today") As Task
-        Dim url As String = String.Format("https://api.sunrise-sunset.org/json?lat={0}&lng={1}&date={2}&formatted=0", latitude, longitude, dateParam)
-
+    Public Async Function FetchAndUpdateAsync(lat As Double, lng As Double, Optional dateParam As String = "today", Optional timeZoneId As String = Nothing) As Task
+        Dim url As String = String.Format("https://api.sunrise-sunset.org/json?lat={0}&lng={1}&date={2}&formatted=0", lat, lng, dateParam)
         Try
             Using client As New HttpClient()
                 client.Timeout = TimeSpan.FromSeconds(10)
@@ -85,19 +91,37 @@ Public Class SunriseSunsetPanel
                 Dim ss As String = GetJsonField(json, "sunset")
                 Dim dl As String = GetJsonField(json, "day_length")
 
-                Dim sunriseUtc As DateTime
-                Dim sunsetUtc As DateTime
+                ' Parse as UTC-aware DateTimeOffset to avoid double-conversion issues
+                Dim sunriseDto As DateTimeOffset
+                Dim sunsetDto As DateTimeOffset
+                If Not DateTimeOffset.TryParse(sr, Globalization.CultureInfo.InvariantCulture, Globalization.DateTimeStyles.AssumeUniversal Or Globalization.DateTimeStyles.AdjustToUniversal, sunriseDto) Then
+                    Throw New FormatException("Unable to parse sunrise time")
+                End If
+                If Not DateTimeOffset.TryParse(ss, Globalization.CultureInfo.InvariantCulture, Globalization.DateTimeStyles.AssumeUniversal Or Globalization.DateTimeStyles.AdjustToUniversal, sunsetDto) Then
+                    Throw New FormatException("Unable to parse sunset time")
+                End If
 
-                If DateTime.TryParse(sr, sunriseUtc) Then sunriseUtc = DateTime.SpecifyKind(sunriseUtc, DateTimeKind.Utc)
-                If DateTime.TryParse(ss, sunsetUtc) Then sunsetUtc = DateTime.SpecifyKind(sunsetUtc, DateTimeKind.Utc)
+                Dim tz As TimeZoneInfo = ResolveTimeZone(If(String.IsNullOrWhiteSpace(timeZoneId), Me.TargetTimeZoneId, timeZoneId))
 
-                Dim sunriseLocal As DateTime = sunriseUtc.ToLocalTime()
-                Dim sunsetLocal As DateTime = sunsetUtc.ToLocalTime()
+                Dim sunriseLocal As DateTime
+                Dim sunsetLocal As DateTime
+                If tz Is Nothing Then
+                    sunriseLocal = sunriseDto.ToLocalTime().DateTime
+                    sunsetLocal = sunsetDto.ToLocalTime().DateTime
+                Else
+                    sunriseLocal = TimeZoneInfo.ConvertTimeFromUtc(sunriseDto.UtcDateTime, tz)
+                    sunsetLocal = TimeZoneInfo.ConvertTimeFromUtc(sunsetDto.UtcDateTime, tz)
+                End If
 
-                _lblSunrise.Text = String.Format("Sunrise: {0}", sunriseLocal.ToString("hh\:mm tt"))
-                _lblSunset.Text = String.Format("Sunset: {0}", sunsetLocal.ToString("hh\:mm tt"))
+                _lblSunrise.Text = String.Format("Sunrise: {0}", sunriseLocal.ToString("hh:mm tt"))
+                _lblSunset.Text = String.Format("Sunset: {0}", sunsetLocal.ToString("hh:mm tt"))
                 _lblDayLength.Text = String.Format("Day Length: {0}", FormatDayLength(dl))
-                _lblUntilSunrise.Text = String.Format("Until Sunrise: {0}", FormatTimeRemaining(sunriseLocal))
+
+                If tz Is Nothing Then
+                    _lblUntilSunrise.Text = String.Format("Until Sunrise: {0}", FormatTimeRemaining(sunriseLocal))
+                Else
+                    _lblUntilSunrise.Text = String.Format("Until Sunrise: {0}", FormatTimeRemaining(sunriseLocal, tz))
+                End If
             End Using
         Catch ex As Exception
             _lblTitle.Text = "Sunrise / Sunset (Error)"
@@ -108,7 +132,7 @@ Public Class SunriseSunsetPanel
     Private Shared Function GetJsonField(json As String, field As String) As String
         ' Very simple JSON extraction without Regex/JSON libs
         ' Looks for: "field": "value"  OR  "field": number
-        Dim key As String = """"c & field & """"c
+        Dim key As String = """" & field & """"
         Dim idx As Integer = json.IndexOf(key, StringComparison.OrdinalIgnoreCase)
         If idx < 0 Then Return String.Empty
         idx = json.IndexOf(":"c, idx)
@@ -139,6 +163,26 @@ Public Class SunriseSunsetPanel
         Return String.Empty
     End Function
 
+    Private Shared Function ResolveTimeZone(id As String) As TimeZoneInfo
+        If String.IsNullOrWhiteSpace(id) Then Return Nothing
+        Dim norm As String = id.Trim()
+        ' Accept common IANA forms and a user-typed reversed form
+        If String.Equals(norm, "America/New_York", StringComparison.OrdinalIgnoreCase) OrElse
+           String.Equals(norm, "New York/America", StringComparison.OrdinalIgnoreCase) OrElse
+           String.Equals(norm, "US/Eastern", StringComparison.OrdinalIgnoreCase) Then
+            Try
+                Return TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time")
+            Catch
+            End Try
+        End If
+        ' Try Windows time zone id directly
+        Try
+            Return TimeZoneInfo.FindSystemTimeZoneById(norm)
+        Catch
+            Return Nothing
+        End Try
+    End Function
+
     Private Shared Function FormatDayLength(dayLengthRaw As String) As String
         If String.IsNullOrWhiteSpace(dayLengthRaw) Then Return "-"
         Dim seconds As Integer
@@ -156,6 +200,15 @@ Public Class SunriseSunsetPanel
             Return "0m"
         End If
         Dim ts As TimeSpan = targetLocal - nowLocal
+        Return String.Format("{0}h {1}m", CInt(Math.Floor(ts.TotalHours)), ts.Minutes)
+    End Function
+
+    Private Shared Function FormatTimeRemaining(targetLocal As DateTime, tz As TimeZoneInfo) As String
+        Dim nowInTz As DateTime = TimeZoneInfo.ConvertTime(DateTime.UtcNow, tz)
+        If targetLocal <= nowInTz Then
+            Return "0m"
+        End If
+        Dim ts As TimeSpan = targetLocal - nowInTz
         Return String.Format("{0}h {1}m", CInt(Math.Floor(ts.TotalHours)), ts.Minutes)
     End Function
 
