@@ -206,7 +206,7 @@ Partial Public Class FrmMain
             Dim dateStr = reader(timeField).ToString()
             Dim dt As DateTime
             If DateTime.TryParse(dateStr, dt) Then
-                timeStr = " @ " & dt.ToString("HH:mm")
+                timeStr = " @ " & dt.ToString("yyyy-MM-dd HH:mm")
             End If
         End If
 

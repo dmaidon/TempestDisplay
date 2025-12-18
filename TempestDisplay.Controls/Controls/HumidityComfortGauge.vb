@@ -1,0 +1,155 @@
+Imports System.ComponentModel
+Imports System.Drawing
+Imports System.Drawing.Drawing2D
+Imports System.Drawing.Text
+Imports System.Windows.Forms
+
+''' <summary>
+''' Enhanced humidity gauge with comfort zones (40-60% ideal, mold risk, static risk).
+''' </summary>
+<DefaultEvent("Click")>
+Public Class HumidityComfortGauge
+    Inherits Control
+
+    Private _humidity As Single = 50
+    Private _showComfortZones As Boolean = True
+
+    <Browsable(True)>
+    <Category("Data")>
+    <DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)>
+    Public Property Humidity As Single
+        Get
+            Return _humidity
+        End Get
+        Set(value As Single)
+            _humidity = Math.Max(0, Math.Min(100, value))
+            Invalidate()
+        End Set
+    End Property
+
+    <Browsable(True)>
+    <Category("Appearance")>
+    <DefaultValue(True)>
+    Public Property ShowComfortZones As Boolean
+        Get
+            Return _showComfortZones
+        End Get
+        Set(value As Boolean)
+            _showComfortZones = value
+            Invalidate()
+        End Set
+    End Property
+
+    Public Sub New()
+        DoubleBuffered = True
+        SetStyle(ControlStyles.UserPaint Or ControlStyles.AllPaintingInWmPaint Or ControlStyles.OptimizedDoubleBuffer, True)
+        Me.MinimumSize = New Size(150, 100)
+    End Sub
+
+    Protected Overrides Sub OnPaint(e As PaintEventArgs)
+        MyBase.OnPaint(e)
+        Dim g = e.Graphics
+        g.SmoothingMode = SmoothingMode.AntiAlias
+        g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit
+
+        Dim w = Me.ClientSize.Width
+        Dim h = Me.ClientSize.Height
+        Dim cx = w / 2.0F
+        Dim cy = h * 0.6F
+        Dim radius = Math.Min(w, h * 1.5F) / 2.0F - 30
+
+        DrawArcBackground(g, cx, cy, radius)
+        DrawComfortZones(g, cx, cy, radius)
+        DrawArcFill(g, cx, cy, radius, _humidity)
+        DrawNeedle(g, cx, cy, radius, _humidity)
+        DrawScale(g, cx, cy, radius)
+        DrawCenterHub(g, cx, cy)
+        DrawReadout(g, cx, cy, _humidity)
+    End Sub
+
+    Private Shared Sub DrawArcBackground(g As Graphics, cx As Single, cy As Single, radius As Single)
+        Using bgBrush As New SolidBrush(Color.FromArgb(240, 245, 250))
+            g.FillPie(bgBrush, cx - radius, cy - radius, radius * 2, radius * 2, 180, 180)
+        End Using
+    End Sub
+
+    Private Sub DrawComfortZones(g As Graphics, cx As Single, cy As Single, radius As Single)
+        If Not _showComfortZones Then Return
+        Dim zones As New List(Of Tuple(Of Single, Single, Color)) From {
+            Tuple.Create(0.0F, 30.0F, Color.FromArgb(100, 220, 180, 120)),
+            Tuple.Create(30.0F, 40.0F, Color.FromArgb(100, 220, 220, 150)),
+            Tuple.Create(40.0F, 60.0F, Color.FromArgb(100, 100, 200, 100)),
+            Tuple.Create(60.0F, 70.0F, Color.FromArgb(100, 150, 200, 220)),
+            Tuple.Create(70.0F, 100.0F, Color.FromArgb(100, 100, 150, 220))
+        }
+        For Each zone In zones
+            Dim startAngle = 180 + (zone.Item1 / 100) * 180
+            Dim sweepAngle = ((zone.Item2 - zone.Item1) / 100) * 180
+            Using zonePen As New Pen(zone.Item3, radius * 0.15F)
+                g.DrawArc(zonePen, cx - radius * 0.85F, cy - radius * 0.85F, radius * 1.7F, radius * 1.7F, startAngle, sweepAngle)
+            End Using
+        Next
+    End Sub
+
+    Private Shared Sub DrawArcFill(g As Graphics, cx As Single, cy As Single, radius As Single, humidity As Single)
+        Dim fillAngle = (humidity / 100) * 180
+        Dim fillColor = If(humidity < 30, Color.FromArgb(220, 180, 120),
+                          If(humidity < 40, Color.FromArgb(220, 220, 150),
+                             If(humidity < 60, Color.FromArgb(100, 200, 100),
+                                If(humidity < 70, Color.FromArgb(100, 180, 220), Color.FromArgb(100, 150, 220)))))
+        Using fillPen As New Pen(fillColor, radius * 0.12F)
+            g.DrawArc(fillPen, cx - radius * 0.7F, cy - radius * 0.7F, radius * 1.4F, radius * 1.4F, 180, fillAngle)
+        End Using
+    End Sub
+
+    Private Shared Sub DrawNeedle(g As Graphics, cx As Single, cy As Single, radius As Single, humidity As Single)
+        Dim angle = 180 + (humidity / 100) * 180
+        Dim angleRad = angle * Math.PI / 180
+        Dim needleLength = radius * 0.65F
+        Dim tipX = CSng(cx + needleLength * Math.Cos(angleRad))
+        Dim tipY = CSng(cy + needleLength * Math.Sin(angleRad))
+        Using needlePen As New Pen(Color.FromArgb(60, 60, 60), 3)
+            needlePen.StartCap = LineCap.Round
+            needlePen.EndCap = LineCap.ArrowAnchor
+            g.DrawLine(needlePen, cx, cy, tipX, tipY)
+        End Using
+    End Sub
+
+    Private Shared Sub DrawScale(g As Graphics, cx As Single, cy As Single, radius As Single)
+        Using font As New Font("Arial", 8, FontStyle.Regular)
+            Using brush As New SolidBrush(Color.FromArgb(80, 80, 80))
+                Using fmt As New StringFormat() With {.Alignment = StringAlignment.Center}
+                    For i = 0 To 100 Step 20
+                        Dim angle = 180 + (i / 100.0) * 180
+                        Dim angleRad = angle * Math.PI / 180
+                        Dim labelRadius = radius * 0.88F
+                        Dim x = CSng(cx + labelRadius * Math.Cos(angleRad))
+                        Dim y = CSng(cy + labelRadius * Math.Sin(angleRad))
+                        g.DrawString(i.ToString(), font, brush, x, y, fmt)
+                    Next
+                End Using
+            End Using
+        End Using
+    End Sub
+
+    Private Shared Sub DrawCenterHub(g As Graphics, cx As Single, cy As Single)
+        Using hubBrush As New SolidBrush(Color.FromArgb(120, 120, 120))
+            g.FillEllipse(hubBrush, cx - 6, cy - 6, 12, 12)
+        End Using
+    End Sub
+
+    Private Shared Sub DrawReadout(g As Graphics, cx As Single, cy As Single, humidity As Single)
+        Using font As New Font("Segoe UI", 12, FontStyle.Bold)
+            Using brush As New SolidBrush(Color.FromArgb(50, 50, 50))
+                Using fmt As New StringFormat() With {.Alignment = StringAlignment.Center, .LineAlignment = StringAlignment.Far}
+                    g.DrawString($"{humidity:0}%", font, brush, cx, cy - 10, fmt)
+                End Using
+            End Using
+        End Using
+    End Sub
+
+    Protected Overrides Sub OnResize(e As EventArgs)
+        MyBase.OnResize(e)
+        Invalidate()
+    End Sub
+End Class

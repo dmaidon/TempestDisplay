@@ -26,6 +26,32 @@ Partial Public Class FrmMain
 
     Private ReadOnly _lightningStrikeLock As New Object()
 
+    ' NEW: Temperature/Humidity/Wind trend tracking (1 hour window)
+    Private Structure ValueReading
+        Public Property Timestamp As DateTime
+        Public Property Value As Double
+    End Structure
+
+    Private ReadOnly _tempHistory As New List(Of ValueReading)()
+    Private ReadOnly _humidHistory As New List(Of ValueReading)()
+    Private ReadOnly _windHistory As New List(Of ValueReading)()
+
+    Private ReadOnly _tempLock As New Object()
+    Private ReadOnly _humidLock As New Object()
+    Private ReadOnly _windLock As New Object()
+
+    Private Const TrendHours As Integer = 1 ' 1-hour window for temp, humidity, wind
+
+    Private ReadOnly _tempHistoryFile As String = Path.Combine(DataDir, "TemperatureHistory.json")
+    Private ReadOnly _humidHistoryFile As String = Path.Combine(DataDir, "HumidityHistory.json")
+    Private ReadOnly _windHistoryFile As String = Path.Combine(DataDir, "WindHistory.json")
+
+    ' Thresholds to consider a metric steady within noise
+    Private Const TempSteadyThresholdF As Double = 0.5
+
+    Private Const HumidSteadyThresholdPct As Double = 1.0
+    Private Const WindSteadyThresholdMph As Double = 1.0
+
     ' Cached JsonSerializerOptions for performance
     Private Shared ReadOnly _jsonOptions As New JsonSerializerOptions With {
         .WriteIndented = True
@@ -56,6 +82,11 @@ Partial Public Class FrmMain
 
             ' Load pressure history from file
             LoadPressureHistory()
+
+            ' NEW: Load temp/humidity/wind history from files
+            LoadTempHistory()
+            LoadHumidityHistory()
+            LoadWindHistory()
 
             ' Load last lightning strike from file
             LoadLastLightningStrike()
@@ -93,6 +124,11 @@ Partial Public Class FrmMain
 
             ' Save pressure history before shutdown
             SavePressureHistory()
+
+            ' NEW: Save histories
+            SaveTempHistory()
+            SaveHumidityHistory()
+            SaveWindHistory()
         Catch ex As Exception
             Log.WriteException(ex, "Error stopping UDP listener")
         End Try
@@ -529,6 +565,202 @@ Partial Public Class FrmMain
 
             Log.Write($"[UDP] Pressure trend calculated: {trend} (ΔP = {deltaPressure:F2} mb over {timeSpan.TotalHours:F1} hours)")
             Return (trend, deltaPressure, True)
+        End SyncLock
+    End Function
+
+#End Region
+
+#Region "Temp/Humidity/Wind Trend Tracking"
+
+    Private Sub LoadTempHistory()
+        Try
+            If Not File.Exists(_tempHistoryFile) Then Return
+            Dim json = File.ReadAllText(_tempHistoryFile)
+            Dim loaded = JsonSerializer.Deserialize(Of List(Of ValueReading))(json)
+            If loaded Is Nothing OrElse loaded.Count = 0 Then Return
+            SyncLock _tempLock
+                Dim cutoff = DateTime.Now.AddHours(-TrendHours)
+                Dim valid = loaded.Where(Function(r) r.Timestamp >= cutoff).OrderBy(Function(r) r.Timestamp).ToList()
+                _tempHistory.Clear()
+                _tempHistory.AddRange(valid)
+                Log.Write($"[Temp] Loaded {valid.Count} readings (1hr window)")
+            End SyncLock
+        Catch ex As Exception
+            Log.WriteException(ex, "[Temp] Error loading temperature history")
+        End Try
+    End Sub
+
+    Private Sub SaveTempHistory()
+        Try
+            SyncLock _tempLock
+                Dim cutoff = DateTime.Now.AddHours(-TrendHours)
+                Dim valid = _tempHistory.Where(Function(r) r.Timestamp >= cutoff).OrderBy(Function(r) r.Timestamp).ToList()
+                If Not Directory.Exists(DataDir) Then Directory.CreateDirectory(DataDir)
+                If valid.Count > 0 Then
+                    File.WriteAllText(_tempHistoryFile, JsonSerializer.Serialize(valid, _jsonOptions))
+                ElseIf File.Exists(_tempHistoryFile) Then
+                    File.Delete(_tempHistoryFile)
+                End If
+            End SyncLock
+        Catch ex As Exception
+            Log.WriteException(ex, "[Temp] Error saving temperature history")
+        End Try
+    End Sub
+
+    Private Sub AddTemperatureReading(tempF As Double, timestamp As DateTime)
+        SyncLock _tempLock
+            _tempHistory.Add(New ValueReading With {.Timestamp = timestamp, .Value = tempF})
+            Dim cutoff = timestamp.AddHours(-TrendHours)
+            _tempHistory.RemoveAll(Function(r) r.Timestamp < cutoff)
+            Task.Run(Sub() SaveTempHistory())
+        End SyncLock
+    End Sub
+
+    Private Function CalculateTempTrend(currentTempF As Double, currentTime As DateTime) As (Trend As String, Delta As Double, HasData As Boolean)
+        SyncLock _tempLock
+            If _tempHistory.Count < 2 Then Return ("N/A", 0, False)
+            Dim oldest = _tempHistory.OrderBy(Function(r) r.Timestamp).First()
+            Dim span = currentTime - oldest.Timestamp
+            If span.TotalHours < 0.95 Then Return ("N/A", 0, False)
+            Dim delta = currentTempF - oldest.Value
+            Dim trend As String
+            If delta <= -TempSteadyThresholdF Then
+                trend = "Falling"
+            ElseIf delta >= TempSteadyThresholdF Then
+                trend = "Rising"
+            Else
+                trend = "Steady"
+            End If
+            Log.Write($"[Temp] Trend: {trend} (ΔT = {delta:F2}°F over {span.TotalMinutes:F0} min)")
+            Return (trend, delta, True)
+        End SyncLock
+    End Function
+
+    Private Sub LoadHumidityHistory()
+        Try
+            If Not File.Exists(_humidHistoryFile) Then Return
+            Dim json = File.ReadAllText(_humidHistoryFile)
+            Dim loaded = JsonSerializer.Deserialize(Of List(Of ValueReading))(json)
+            If loaded Is Nothing OrElse loaded.Count = 0 Then Return
+            SyncLock _humidLock
+                Dim cutoff = DateTime.Now.AddHours(-TrendHours)
+                Dim valid = loaded.Where(Function(r) r.Timestamp >= cutoff).OrderBy(Function(r) r.Timestamp).ToList()
+                _humidHistory.Clear()
+                _humidHistory.AddRange(valid)
+                Log.Write($"[Humid] Loaded {valid.Count} readings (1hr window)")
+            End SyncLock
+        Catch ex As Exception
+            Log.WriteException(ex, "[Humid] Error loading humidity history")
+        End Try
+    End Sub
+
+    Private Sub SaveHumidityHistory()
+        Try
+            SyncLock _humidLock
+                Dim cutoff = DateTime.Now.AddHours(-TrendHours)
+                Dim valid = _humidHistory.Where(Function(r) r.Timestamp >= cutoff).OrderBy(Function(r) r.Timestamp).ToList()
+                If Not Directory.Exists(DataDir) Then Directory.CreateDirectory(DataDir)
+                If valid.Count > 0 Then
+                    File.WriteAllText(_humidHistoryFile, JsonSerializer.Serialize(valid, _jsonOptions))
+                ElseIf File.Exists(_humidHistoryFile) Then
+                    File.Delete(_humidHistoryFile)
+                End If
+            End SyncLock
+        Catch ex As Exception
+            Log.WriteException(ex, "[Humid] Error saving humidity history")
+        End Try
+    End Sub
+
+    Private Sub AddHumidityReading(humidityPct As Double, timestamp As DateTime)
+        SyncLock _humidLock
+            _humidHistory.Add(New ValueReading With {.Timestamp = timestamp, .Value = humidityPct})
+            Dim cutoff = timestamp.AddHours(-TrendHours)
+            _humidHistory.RemoveAll(Function(r) r.Timestamp < cutoff)
+            Task.Run(Sub() SaveHumidityHistory())
+        End SyncLock
+    End Sub
+
+    Private Function CalculateHumidityTrend(currentHumidityPct As Double, currentTime As DateTime) As (Trend As String, Delta As Double, HasData As Boolean)
+        SyncLock _humidLock
+            If _humidHistory.Count < 2 Then Return ("N/A", 0, False)
+            Dim oldest = _humidHistory.OrderBy(Function(r) r.Timestamp).First()
+            Dim span = currentTime - oldest.Timestamp
+            If span.TotalHours < 0.95 Then Return ("N/A", 0, False)
+            Dim delta = currentHumidityPct - oldest.Value
+            Dim trend As String
+            If delta <= -HumidSteadyThresholdPct Then
+                trend = "Falling"
+            ElseIf delta >= HumidSteadyThresholdPct Then
+                trend = "Rising"
+            Else
+                trend = "Steady"
+            End If
+            Log.Write($"[Humid] Trend: {trend} (ΔH = {delta:F1}% over {span.TotalMinutes:F0} min)")
+            Return (trend, delta, True)
+        End SyncLock
+    End Function
+
+    Private Sub LoadWindHistory()
+        Try
+            If Not File.Exists(_windHistoryFile) Then Return
+            Dim json = File.ReadAllText(_windHistoryFile)
+            Dim loaded = JsonSerializer.Deserialize(Of List(Of ValueReading))(json)
+            If loaded Is Nothing OrElse loaded.Count = 0 Then Return
+            SyncLock _windLock
+                Dim cutoff = DateTime.Now.AddHours(-TrendHours)
+                Dim valid = loaded.Where(Function(r) r.Timestamp >= cutoff).OrderBy(Function(r) r.Timestamp).ToList()
+                _windHistory.Clear()
+                _windHistory.AddRange(valid)
+                Log.Write($"[Wind] Loaded {valid.Count} readings (1hr window)")
+            End SyncLock
+        Catch ex As Exception
+            Log.WriteException(ex, "[Wind] Error loading wind history")
+        End Try
+    End Sub
+
+    Private Sub SaveWindHistory()
+        Try
+            SyncLock _windLock
+                Dim cutoff = DateTime.Now.AddHours(-TrendHours)
+                Dim valid = _windHistory.Where(Function(r) r.Timestamp >= cutoff).OrderBy(Function(r) r.Timestamp).ToList()
+                If Not Directory.Exists(DataDir) Then Directory.CreateDirectory(DataDir)
+                If valid.Count > 0 Then
+                    File.WriteAllText(_windHistoryFile, JsonSerializer.Serialize(valid, _jsonOptions))
+                ElseIf File.Exists(_windHistoryFile) Then
+                    File.Delete(_windHistoryFile)
+                End If
+            End SyncLock
+        Catch ex As Exception
+            Log.WriteException(ex, "[Wind] Error saving wind history")
+        End Try
+    End Sub
+
+    Private Sub AddWindReading(windMph As Double, timestamp As DateTime)
+        SyncLock _windLock
+            _windHistory.Add(New ValueReading With {.Timestamp = timestamp, .Value = windMph})
+            Dim cutoff = timestamp.AddHours(-TrendHours)
+            _windHistory.RemoveAll(Function(r) r.Timestamp < cutoff)
+            Task.Run(Sub() SaveWindHistory())
+        End SyncLock
+    End Sub
+
+    Private Function CalculateWindTrend(currentWindMph As Double, currentTime As DateTime) As (Trend As String, Delta As Double, HasData As Boolean)
+        SyncLock _windLock
+            If _windHistory.Count < 2 Then Return ("N/A", 0, False)
+            Dim oldest = _windHistory.OrderBy(Function(r) r.Timestamp).First()
+            Dim span = currentTime - oldest.Timestamp
+            If span.TotalHours < 0.95 Then Return ("N/A", 0, False)
+            Dim delta = currentWindMph - oldest.Value
+            Dim trend As String
+            If delta <= -WindSteadyThresholdMph Then
+                trend = "Falling"
+            ElseIf delta >= WindSteadyThresholdMph Then
+                trend = "Rising"
+            Else
+                trend = "Steady"
+            End If
+            Log.Write($"[Wind] Trend: {trend} (ΔW = {delta:F2} mph over {span.TotalMinutes:F0} min)")
+            Return (trend, delta, True)
         End SyncLock
     End Function
 

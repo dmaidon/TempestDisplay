@@ -20,7 +20,7 @@
             ' Update wind displays
             UpdateWindDisplays(data)
 
-            ' Update atmospheric readings
+            ' Update atmospheric readings (labels + barometer gauge)
             UpdateAtmosphericReadings(data)
 
             ' Update light/UV displays
@@ -35,6 +35,35 @@
             ' Update cloud base
             UpdateCloudBase(data)
 
+            ' Track temp/humidity/wind histories for trend display
+            AddTemperatureReading(data.TempF, data.TimestampDateTime)
+            AddHumidityReading(data.Humidity, data.TimestampDateTime)
+            AddWindReading(data.WindAvgMph, data.TimestampDateTime)
+
+            Dim tTrend = CalculateTempTrend(data.TempF, data.TimestampDateTime)
+            Dim hTrend = CalculateHumidityTrend(data.Humidity, data.TimestampDateTime)
+            Dim wTrend = CalculateWindTrend(data.WindAvgMph, data.TimestampDateTime)
+
+            ' Update combined trend control if available
+            If TrendStatusCombined IsNot Nothing Then
+                Dim ToDir As Integer = If(Not tTrend.HasData, 0, If(tTrend.Delta > 0, 1, If(tTrend.Delta < 0, -1, 0)))
+                Dim HoDir As Integer = If(Not hTrend.HasData, 0, If(hTrend.Delta > 0, 1, If(hTrend.Delta < 0, -1, 0)))
+                Dim WoDir As Integer = If(Not wTrend.HasData, 0, If(wTrend.Delta > 0, 1, If(wTrend.Delta < 0, -1, 0)))
+                TrendStatusCombined.SetTrend("Temp", ToDir)
+                TrendStatusCombined.SetTrend("Humid", HoDir)
+                TrendStatusCombined.SetTrend("Wind", WoDir)
+            ElseIf TrendArrows IsNot Nothing Then
+                Dim ToDir As Integer = If(Not tTrend.HasData, 0, If(tTrend.Delta > 0, 1, If(tTrend.Delta < 0, -1, 0)))
+                Dim HoDir As Integer = If(Not hTrend.HasData, 0, If(hTrend.Delta > 0, 1, If(hTrend.Delta < 0, -1, 0)))
+                Dim WoDir As Integer = If(Not wTrend.HasData, 0, If(wTrend.Delta > 0, 1, If(wTrend.Delta < 0, -1, 0)))
+                TrendArrows.SetTrend("Temp", ToDir)
+                TrendArrows.SetTrend("Humid", HoDir)
+                TrendArrows.SetTrend("Wind", WoDir)
+            End If
+
+            ' Update sunrise/sunset panel (requires coordinates in Tag as "lat,lng")
+            UpdateSunriseSunsetPanel()
+
             ' Update battery status
             UpdateBatteryStatus(data.Battery)
 
@@ -46,6 +75,29 @@
             Log.Write($"[UDP] Weather: {data.TempF:F1}°F, {data.Humidity}% RH, {data.PressureInHg:F2} inHg, Wind: {data.WindAvgMph:F1} mph @ {data.WindDirection}°")
         Catch ex As Exception
             Log.WriteException(ex, "[UI] Error in UpdateWeatherUI")
+        End Try
+    End Sub
+
+    Private Sub UpdateSunriseSunsetPanel()
+        Try
+            If SunriseSunset Is Nothing Then Return
+            ' Expect Tag like "lat,lng" (e.g., "40.7128,-74.0060")
+            Dim coords As String = TryCast(SunriseSunset.Tag, String)
+            If String.IsNullOrWhiteSpace(coords) Then
+                ' No coordinates provided; skip fetch
+                Exit Sub
+            End If
+            Dim parts = coords.Split({","c}, StringSplitOptions.RemoveEmptyEntries)
+            If parts.Length <> 2 Then Exit Sub
+            Dim lat As Double
+            Dim lng As Double
+            If Not Double.TryParse(parts(0).Trim(), lat) Then Exit Sub
+            If Not Double.TryParse(parts(1).Trim(), lng) Then Exit Sub
+
+            ' Fire and forget: start task and ignore the result
+            Dim _task = SunriseSunset.FetchAndUpdateAsync(lat, lng)
+        Catch ex As Exception
+            Log.WriteException(ex, "[UI] Error updating SunriseSunset panel")
         End Try
     End Sub
 
@@ -78,7 +130,7 @@
     End Sub
 
     ''' <summary>
-    ''' Update temperature gauge controls
+    ''' Update temperature gauge/thermometer controls
     ''' </summary>
     Private Sub UpdateTemperatureGauges(data As ObservationData)
         Try
@@ -86,27 +138,49 @@
             Dim dewPoint = CalculateDewPoint(data.TempF, data.Humidity)
             Dim feelsLike = CalculateFeelsLike(data.TempF, data.Humidity, data.WindAvgMph)
 
-            ' Update gauges
-            If TgCurrentTemp IsNot Nothing Then
+            ' Update thermometers (Phase 1 - new controls)
+            If ThermCurrentTemp IsNot Nothing Then
+                ThermCurrentTemp.TempF = CSng(data.TempF)
+                Log.Write($"[UI] Updated ThermCurrentTemp.TempF = {data.TempF:F1}°F")
+            ElseIf TgCurrentTemp IsNot Nothing Then
+                ' Fallback to old gauge if thermometer not available
                 TgCurrentTemp.TempF = CSng(data.TempF)
+                Log.Write($"[UI] Updated TgCurrentTemp.TempF = {data.TempF:F1}°F (fallback)")
+            Else
+                Log.Write("[UI] WARNING: Both ThermCurrentTemp and TgCurrentTemp are Nothing!")
             End If
 
-            If TgFeelsLike IsNot Nothing Then
-                TgFeelsLike.TempF = CSng(feelsLike)
+            If ThermFeelsLike IsNot Nothing Then
+                ThermFeelsLike.TempF = CSng(feelsLike)
 
                 ' Set background color based on which feels-like metric is active
                 Dim label = GetFeelsLikeLabel(data.TempF, data.WindAvgMph)
                 Select Case label
                     Case "Heat Index"
-                        TgFeelsLike.BackColor = Color.MistyRose   ' light red for hot
+                        ThermFeelsLike.BackColor = Color.MistyRose   ' light red for hot
                     Case "Wind Chill"
-                        TgFeelsLike.BackColor = Color.LightBlue   ' light blue for cold
+                        ThermFeelsLike.BackColor = Color.LightBlue   ' light blue for cold
                     Case Else
-                        TgFeelsLike.BackColor = Color.AntiqueWhite ' neutral for comfortable range
+                        ThermFeelsLike.BackColor = Color.AntiqueWhite ' neutral for comfortable range
+                End Select
+            ElseIf TgFeelsLike IsNot Nothing Then
+                ' Fallback to old gauge
+                TgFeelsLike.TempF = CSng(feelsLike)
+                Dim label = GetFeelsLikeLabel(data.TempF, data.WindAvgMph)
+                Select Case label
+                    Case "Heat Index"
+                        TgFeelsLike.BackColor = Color.MistyRose
+                    Case "Wind Chill"
+                        TgFeelsLike.BackColor = Color.LightBlue
+                    Case Else
+                        TgFeelsLike.BackColor = Color.AntiqueWhite
                 End Select
             End If
 
-            If TgDewpoint IsNot Nothing Then
+            If ThermDewpoint IsNot Nothing Then
+                ThermDewpoint.TempF = CSng(dewPoint)
+            ElseIf TgDewpoint IsNot Nothing Then
+                ' Fallback to old gauge
                 TgDewpoint.TempF = CSng(dewPoint)
             End If
 
@@ -149,24 +223,23 @@
     ''' </summary>
     Private Sub UpdateAtmosphericReadings(data As ObservationData)
         Try
-            ' Update pressure display
+            Dim pressureInHg As Double = TempestDisplay.Common.Weather.UnitConversions.MillibarsToInHg(data.Pressure)
+
             If LblBaroPress IsNot Nothing Then
-                LblBaroPress.Text = $"Barometric Pressure: {data.PressureInHg:F2} inHg"
+                LblBaroPress.Text = $"Barometric Pressure: {pressureInHg:F2} inHg"
             End If
 
-            ' Add pressure reading to history
-            AddPressureReading(data.Pressure, data.TimestampDateTime)
+            If BaroPressure IsNot Nothing Then
+                BaroPressure.PressureInHg = CSng(pressureInHg)
+            End If
 
-            ' Calculate and display pressure trend
+            AddPressureReading(data.Pressure, data.TimestampDateTime)
             Dim trendResult = CalculatePressureTrend(data.Pressure, data.TimestampDateTime)
 
             If LblPressTrend IsNot Nothing Then
                 If trendResult.HasData Then
-                    ' Display trend with delta
                     Dim deltaSign = If(trendResult.Delta >= 0, "+", "")
                     LblPressTrend.Text = $"Pressure Trend: {trendResult.Trend} ({deltaSign}{trendResult.Delta:F2} mb/3hr)"
-
-                    ' Color-code the trend
                     Select Case trendResult.Trend
                         Case "Falling"
                             LblPressTrend.ForeColor = Color.Blue
@@ -180,6 +253,27 @@
                     LblPressTrend.ForeColor = SystemColors.ControlText
                 End If
             End If
+
+            ' Hook Trend arrows (via combined control if available)
+            If TrendStatusCombined IsNot Nothing Then
+                Dim pressDir As Integer = 0
+                If trendResult.HasData Then
+                    pressDir = If(trendResult.Trend = "Rising", 1, If(trendResult.Trend = "Falling", -1, 0))
+                End If
+                TrendStatusCombined.SetTrend("Press", pressDir)
+                TrendStatusCombined.SetTrend("Temp", 0)
+                TrendStatusCombined.SetTrend("Humid", 0)
+                TrendStatusCombined.SetTrend("Wind", 0)
+            ElseIf TrendArrows IsNot Nothing Then
+                Dim pressDir As Integer = 0
+                If trendResult.HasData Then
+                    pressDir = If(trendResult.Trend = "Rising", 1, If(trendResult.Trend = "Falling", -1, 0))
+                End If
+                TrendArrows.SetTrend("Press", pressDir)
+                TrendArrows.SetTrend("Temp", 0)
+                TrendArrows.SetTrend("Humid", 0)
+                TrendArrows.SetTrend("Wind", 0)
+            End If
         Catch ex As Exception
             Log.WriteException(ex, "[UI] Error updating atmospheric readings")
         End Try
@@ -190,6 +284,12 @@
     ''' </summary>
     Private Sub UpdateLightDisplays(data As ObservationData)
         Try
+            ' Update combined UV+Solar control if present
+            If SolarUvCombined IsNot Nothing Then
+                SolarUvCombined.UvIndex = CSng(data.UvIndex)
+                SolarUvCombined.SolarRadiation = CSng(data.SolarRadiation)
+            End If
+
             If LblUV IsNot Nothing Then
                 LblUV.Text = $"UV: {data.UvIndex:F1}"
             End If
@@ -234,6 +334,14 @@
                 End If
 
                 Log.Write($"Air density calculated: {airDensity:F4} kg/m³")
+
+                ' Update the AirDensityAltimeter custom control
+                If AltAirDensity IsNot Nothing Then
+                    Dim densityAltFt As Double = TempestDisplay.Common.Weather.WeatherCalculations.CalculateDensityAltitude(data.TempF, data.Pressure, data.Humidity)
+                    AltAirDensity.AirDensity = CSng(airDensity)
+                    AltAirDensity.DensityAltitude = CSng(densityAltFt)
+                    AltAirDensity.Category = GetAirDensityCategory(airDensity)
+                End If
             End If
         Catch ex As Exception
             Log.WriteException(ex, "[UI] Error updating air density")

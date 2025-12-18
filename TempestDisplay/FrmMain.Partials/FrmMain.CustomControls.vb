@@ -2,106 +2,126 @@
 
     Private ReadOnly _customBackColor As Color = Color.AntiqueWhite
 
+    ' New: hold a reference to the combined UV+Solar control so other partials can update it
+    Friend SolarUvCombined As Controls.SolarUvCombinedMeter
+
+    ' New: hold a reference to combined Trend + Status control
+    Friend TrendStatusCombined As Controls.TrendStatusCombinedControl
+
+    ' New: Sunrise/Sunset panel
+    Friend SunriseSunset As Controls.SunriseSunsetPanel
+
     Private Sub InitializeCustomcontrols()
 
         Try
-            ' Temperature gauges
-            If TgCurrentTemp IsNot Nothing Then
-                TgCurrentTemp.Label = "Current Temperature"
-                TgCurrentTemp.BackColor = _customBackColor
-                TgCurrentTemp.Font = New Font(TgCurrentTemp.Font, FontStyle.Bold)
-                TgCurrentTemp.MinF = -5
-                TgCurrentTemp.MaxF = 110
+            ' Temperature thermometers (Phase 1 - replacing gauges with vertical thermometers)
+            If ThermCurrentTemp IsNot Nothing Then
+                Log.Write("ThermCurrentTemp control exists - configuring properties")
+                ThermCurrentTemp.Label = "Current"
+                ThermCurrentTemp.BackColor = _customBackColor
+                If ThermCurrentTemp.Font IsNot Nothing Then
+                    ThermCurrentTemp.Font = New Font(ThermCurrentTemp.Font, FontStyle.Bold)
+                Else
+                    ThermCurrentTemp.Font = New Font("Segoe UI", 9, FontStyle.Bold)
+                End If
+                ThermCurrentTemp.MinF = -5
+                ThermCurrentTemp.MaxF = 110
+                ThermCurrentTemp.ShowFreezeMarker = True
+                ThermCurrentTemp.ShowDualScale = True
+                Log.Write($"ThermCurrentTemp configured - Visible:{ThermCurrentTemp.Visible}, Parent:{If(ThermCurrentTemp.Parent IsNot Nothing, ThermCurrentTemp.Parent.Name, "None")}")
             Else
-                ' Create TgCurrentTemp control dynamically if it doesn't exist
-                Log.Write("TgCurrentTemp control is Nothing - creating dynamically")
+                Log.Write("ThermCurrentTemp control is Nothing - creating dynamically")
                 Try
                     If TlpData IsNot Nothing Then
-                        TgCurrentTemp = New Controls.TempGaugeControl With {
-                            .Label = "Current Temperature",
+                        ThermCurrentTemp = New Controls.TempThermometerControl With {
+                            .Label = "Current",
                             .BackColor = _customBackColor,
                             .Dock = DockStyle.Fill,
                             .MinF = -5,
-                            .MaxF = 110
+                            .MaxF = 110,
+                            .ShowFreezeMarker = True,
+                            .ShowDualScale = True
                         }
-                        TgCurrentTemp.Font = New Font(TgCurrentTemp.Font, FontStyle.Bold)
-
-                        ' Add to TableLayoutPanel at column 0, row 0 with column span of 2
-                        TlpData.Controls.Add(TgCurrentTemp, 0, 0)
-                        TlpData.SetColumnSpan(TgCurrentTemp, 2)
-
-                        Log.Write("TgCurrentTemp control created and added to TlpData[0,0] with ColumnSpan=2")
+                        ThermCurrentTemp.Font = New Font(ThermCurrentTemp.Font, FontStyle.Bold)
+                        TlpData.Controls.Add(ThermCurrentTemp, 0, 0)
+                        Log.Write("ThermCurrentTemp created and added to TlpData[0,0]")
                     Else
-                        Log.Write("WARNING: TlpData is Nothing - cannot add TgCurrentTemp")
+                        Log.Write("WARNING: TlpData is Nothing - cannot add ThermCurrentTemp")
                     End If
                 Catch ex As Exception
-                    Log.WriteException(ex, "Error creating TgCurrentTemp control dynamically")
+                    Log.WriteException(ex, "Error creating ThermCurrentTemp control dynamically")
                 End Try
             End If
 
-            If TgFeelsLike IsNot Nothing Then
-                TgFeelsLike.Label = "Feels Like"
-                TgFeelsLike.BackColor = _customBackColor
-                TgFeelsLike.Font = New Font(TgFeelsLike.Font, FontStyle.Bold)
-                TgFeelsLike.MinF = -10
-                TgFeelsLike.MaxF = 120
+            If ThermFeelsLike IsNot Nothing Then
+                ThermFeelsLike.Label = "Feels Like"
+                ThermFeelsLike.BackColor = _customBackColor
+                If ThermFeelsLike.Font IsNot Nothing Then
+                    ThermFeelsLike.Font = New Font(ThermFeelsLike.Font, FontStyle.Bold)
+                Else
+                    ThermFeelsLike.Font = New Font("Segoe UI", 9, FontStyle.Bold)
+                End If
+                ThermFeelsLike.MinF = -10
+                ThermFeelsLike.MaxF = 120
+                ThermFeelsLike.ShowFreezeMarker = True
+                ThermFeelsLike.ShowDualScale = True
             Else
-                ' Create TgFeelsLike control dynamically if it doesn't exist
-                Log.Write("TgFeelsLike control is Nothing - creating dynamically")
+                Log.Write("ThermFeelsLike control is Nothing - creating dynamically")
                 Try
                     If TlpData IsNot Nothing Then
-                        TgFeelsLike = New Controls.TempGaugeControl With {
+                        ThermFeelsLike = New Controls.TempThermometerControl With {
                             .Label = "Feels Like",
                             .BackColor = _customBackColor,
                             .Dock = DockStyle.Fill,
                             .MinF = -10,
-                            .MaxF = 120
+                            .MaxF = 120,
+                            .ShowFreezeMarker = True,
+                            .ShowDualScale = True
                         }
-                        TgFeelsLike.Font = New Font(TgFeelsLike.Font, FontStyle.Bold)
-
-                        ' Add to TableLayoutPanel at column 0, row 1 with column span of 2
-                        TlpData.Controls.Add(TgFeelsLike, 0, 1)
-                        TlpData.SetColumnSpan(TgFeelsLike, 2)
-
-                        Log.Write("TgFeelsLike control created and added to TlpData[0,1] with ColumnSpan=2")
+                        ThermFeelsLike.Font = New Font(ThermFeelsLike.Font, FontStyle.Bold)
+                        TlpData.Controls.Add(ThermFeelsLike, 1, 0)
+                        Log.Write("ThermFeelsLike created and added to TlpData[1,0]")
                     Else
-                        Log.Write("WARNING: TlpData is Nothing - cannot add TgFeelsLike")
+                        Log.Write("WARNING: TlpData is Nothing - cannot add ThermFeelsLike")
                     End If
                 Catch ex As Exception
-                    Log.WriteException(ex, "Error creating TgFeelsLike control dynamically")
+                    Log.WriteException(ex, "Error creating ThermFeelsLike control dynamically")
                 End Try
             End If
 
-            If TgDewpoint IsNot Nothing Then
-                TgDewpoint.Label = "Dew Point"
-                TgDewpoint.BackColor = _customBackColor
-                TgDewpoint.Font = New Font(TgDewpoint.Font, FontStyle.Bold)
-                TgDewpoint.MinF = -5
-                TgDewpoint.MaxF = 110
+            If ThermDewpoint IsNot Nothing Then
+                ThermDewpoint.Label = "Dew Point"
+                ThermDewpoint.BackColor = _customBackColor
+                If ThermDewpoint.Font IsNot Nothing Then
+                    ThermDewpoint.Font = New Font(ThermDewpoint.Font, FontStyle.Bold)
+                Else
+                    ThermDewpoint.Font = New Font("Segoe UI", 9, FontStyle.Bold)
+                End If
+                ThermDewpoint.MinF = -5
+                ThermDewpoint.MaxF = 110
+                ThermDewpoint.ShowFreezeMarker = False
+                ThermDewpoint.ShowDualScale = True
             Else
-                ' Create TgDewpoint control dynamically if it doesn't exist
-                Log.Write("TgDewpoint control is Nothing - creating dynamically")
+                Log.Write("ThermDewpoint control is Nothing - creating dynamically")
                 Try
                     If TlpData IsNot Nothing Then
-                        TgDewpoint = New Controls.TempGaugeControl With {
+                        ThermDewpoint = New Controls.TempThermometerControl With {
                             .Label = "Dew Point",
                             .BackColor = _customBackColor,
                             .Dock = DockStyle.Fill,
                             .MinF = -5,
-                            .MaxF = 110
+                            .MaxF = 110,
+                            .ShowFreezeMarker = True,
+                            .ShowDualScale = True
                         }
-                        TgDewpoint.Font = New Font(TgDewpoint.Font, FontStyle.Bold)
-
-                        ' Add to TableLayoutPanel at column 0, row 2 with column span of 2
-                        TlpData.Controls.Add(TgDewpoint, 0, 2)
-                        TlpData.SetColumnSpan(TgDewpoint, 2)
-
-                        Log.Write("TgDewpoint control created and added to TlpData[0,2] with ColumnSpan=2")
+                        ThermDewpoint.Font = New Font(ThermDewpoint.Font, FontStyle.Bold)
+                        TlpData.Controls.Add(ThermDewpoint, 2, 0)
+                        Log.Write("ThermDewpoint created and added to TlpData[2,0]")
                     Else
-                        Log.Write("WARNING: TlpData is Nothing - cannot add TgDewpoint")
+                        Log.Write("WARNING: TlpData is Nothing - cannot add ThermDewpoint")
                     End If
                 Catch ex As Exception
-                    Log.WriteException(ex, "Error creating TgDewpoint control dynamically")
+                    Log.WriteException(ex, "Error creating ThermDewpoint control dynamically")
                 End Try
             End If
 
@@ -123,7 +143,7 @@
                         FgRH.Font = New Font(FgRH.Font, FontStyle.Bold)
 
                         ' Add to TableLayoutPanel at column 0, row 3 with column span of 2
-                        TlpData.Controls.Add(FgRH, 2, 0)
+                        TlpData.Controls.Add(FgRH, 1, 0)
                         TlpData.SetColumnSpan(FgRH, 2)
 
                         Log.Write("FgRH control created and added to TlpData[2,0] with ColumnSpan=2")
@@ -151,7 +171,7 @@
                         PTC.Font = New Font(PTC.Font.FontFamily, 8, FontStyle.Bold)
 
                         ' Add to TableLayoutPanel at column 0, row 4 with column span of 2
-                        TlpData.Controls.Add(PTC, 6, 0)
+                        TlpData.Controls.Add(PTC, 2, 1)
                         TlpData.SetColumnSpan(PTC, 2)
 
                         Log.Write("PTC control created and added to TlpData[6,0] with ColumnSpan=2")
@@ -178,7 +198,7 @@
                         }
                         WrWindSpeed.Font = New Font(WrWindSpeed.Font.FontFamily, 8, FontStyle.Bold)
                         ' Add to TableLayoutPanel at column 4, row 2 with column span of 2
-                        TlpData.Controls.Add(WrWindSpeed, 2, 1)
+                        TlpData.Controls.Add(WrWindSpeed, 6, 1)
                         TlpData.SetColumnSpan(WrWindSpeed, 2)
                         Log.Write("WrWindSpeed control created and added to TlpData[4,2] with ColumnSpan=2")
                     Else
@@ -188,6 +208,212 @@
                     Log.WriteException(ex, "Error creating WrWindSpeed control dynamically")
                 End Try
             End If
+
+            ' Phase 2: Barometer (Atmospheric Pressure)
+            If BaroPressure IsNot Nothing Then
+                BaroPressure.BackColor = _customBackColor
+                BaroPressure.Font = New Font(BaroPressure.Font, FontStyle.Bold)
+            Else
+                Log.Write("BaroPressure control is Nothing - creating dynamically")
+                Try
+                    If TlpData IsNot Nothing Then
+                        BaroPressure = New Controls.BarometerControl With {
+                            .BackColor = _customBackColor,
+                            .Dock = DockStyle.Fill
+                        }
+                        BaroPressure.Font = New Font(BaroPressure.Font, FontStyle.Bold)
+                        TlpData.Controls.Add(BaroPressure, 4, 0)
+                        TlpData.SetColumnSpan(BaroPressure, 2)
+                        Log.Write("BaroPressure created and added to TlpData[4,0] with ColumnSpan=2")
+                    Else
+                        Log.Write("WARNING: TlpData is Nothing - cannot add BaroPressure")
+                    End If
+                Catch ex As Exception
+                    Log.WriteException(ex, "Error creating BaroPressure control dynamically")
+                End Try
+            End If
+
+            ' Phase 2: Air Density Altimeter
+            If AltAirDensity IsNot Nothing Then
+                AltAirDensity.BackColor = _customBackColor
+                AltAirDensity.Font = New Font(AltAirDensity.Font, FontStyle.Bold)
+            Else
+                Log.Write("AltAirDensity control is Nothing - creating dynamically")
+                Try
+                    If TlpData IsNot Nothing Then
+                        AltAirDensity = New Controls.AirDensityAltimeter With {
+                            .BackColor = _customBackColor,
+                            .Dock = DockStyle.Fill
+                        }
+                        AltAirDensity.Font = New Font(AltAirDensity.Font, FontStyle.Bold)
+                        TlpData.Controls.Add(AltAirDensity, 6, 1)
+                        TlpData.SetColumnSpan(AltAirDensity, 2)
+                        Log.Write("AltAirDensity created and added to TlpData[6,1] with ColumnSpan=2")
+                    Else
+                        Log.Write("WARNING: TlpData is Nothing - cannot add AltAirDensity")
+                    End If
+                Catch ex As Exception
+                    Log.WriteException(ex, "Error creating AltAirDensity control dynamically")
+                End Try
+            End If
+
+            ' Phase 3: Rain Rate Gauge
+            If RainRate IsNot Nothing Then
+                RainRate.BackColor = _customBackColor
+                RainRate.Font = New Font(RainRate.Font, FontStyle.Bold)
+            Else
+                Log.Write("RainRate control is Nothing - creating dynamically")
+                Try
+                    If TlpData IsNot Nothing Then
+                        RainRate = New Controls.RainRateGauge With {
+                            .BackColor = _customBackColor,
+                            .Dock = DockStyle.Fill
+                        }
+                        RainRate.Font = New Font(RainRate.Font, FontStyle.Bold)
+                        TlpData.Controls.Add(RainRate, 4, 1)
+                        TlpData.SetColumnSpan(RainRate, 1)
+                        Log.Write("RainRate created and added to TlpData[4,1] with ColumnSpan=2")
+                    Else
+                        Log.Write("WARNING: TlpData is Nothing - cannot add RainRate")
+                    End If
+                Catch ex As Exception
+                    Log.WriteException(ex, "Error creating RainRate control dynamically")
+                End Try
+            End If
+
+            ' Phase 3: Lightning Proximity Radar
+            If LightningRadar IsNot Nothing Then
+                LightningRadar.BackColor = _customBackColor
+                LightningRadar.Font = New Font(LightningRadar.Font, FontStyle.Bold)
+            Else
+                Log.Write("LightningRadar control is Nothing - creating dynamically")
+                Try
+                    If TlpData IsNot Nothing Then
+                        LightningRadar = New Controls.LightningProximityRadar With {
+                            .BackColor = _customBackColor,
+                            .Dock = DockStyle.Fill
+                        }
+                        LightningRadar.Font = New Font(LightningRadar.Font, FontStyle.Bold)
+                        TlpData.Controls.Add(LightningRadar, 0, 2)
+                        TlpData.SetColumnSpan(LightningRadar, 2)
+                        Log.Write("LightningRadar created and added to TlpData[0,2] with ColumnSpan=2")
+                    Else
+                        Log.Write("WARNING: TlpData is Nothing - cannot add LightningRadar")
+                    End If
+                Catch ex As Exception
+                    Log.WriteException(ex, "Error creating LightningRadar control dynamically")
+                End Try
+            End If
+
+            ' Phase 4: Combined UV + Solar Energy Meter
+            ' Remove existing individual meters from the layout if present
+            Try
+                If UvMeter IsNot Nothing AndAlso UvMeter.Parent Is TlpData Then
+                    TlpData.Controls.Remove(UvMeter)
+                    UvMeter.Dispose()
+                    UvMeter = Nothing
+                    Log.Write("Removed existing UvIndexMeter from layout")
+                End If
+                If SolarMeter IsNot Nothing AndAlso SolarMeter.Parent Is TlpData Then
+                    TlpData.Controls.Remove(SolarMeter)
+                    SolarMeter.Dispose()
+                    SolarMeter = Nothing
+                    Log.Write("Removed existing SolarEnergyMeter from layout")
+                End If
+            Catch ex As Exception
+                Log.WriteException(ex, "Error removing existing UV/Solar controls")
+            End Try
+
+            ' Create and install combined control at the original UV position (column 2, row 2)
+            Try
+                If TlpData IsNot Nothing Then
+                    If SolarUvCombined Is Nothing Then
+                        SolarUvCombined = New Controls.SolarUvCombinedMeter With {
+                            .BackColor = _customBackColor,
+                            .Dock = DockStyle.Fill,
+                            .Font = New Font(Me.Font, FontStyle.Bold)
+                        }
+                        TlpData.Controls.Add(SolarUvCombined, 2, 2)
+                        TlpData.SetColumnSpan(SolarUvCombined, 2)
+                        Log.Write("SolarUvCombinedMeter created and added to TlpData[2,2] with ColumnSpan=2")
+                    Else
+                        SolarUvCombined.BackColor = _customBackColor
+                        SolarUvCombined.Font = New Font(Me.Font, FontStyle.Bold)
+                    End If
+                Else
+                    Log.Write("WARNING: TlpData is Nothing - cannot add SolarUvCombinedMeter")
+                End If
+            Catch ex As Exception
+                Log.WriteException(ex, "Error creating SolarUvCombinedMeter dynamically")
+            End Try
+
+            ' Phase 5: Combined Trend Arrows + Status LED Panel
+            ' Remove existing separate controls from layout if present
+            Try
+                If TrendArrows IsNot Nothing AndAlso TrendArrows.Parent Is TlpData Then
+                    TlpData.Controls.Remove(TrendArrows)
+                    TrendArrows.Dispose()
+                    TrendArrows = Nothing
+                    Log.Write("Removed existing TrendArrows control from layout")
+                End If
+                If StatusLeds IsNot Nothing AndAlso StatusLeds.Parent Is TlpData Then
+                    TlpData.Controls.Remove(StatusLeds)
+                    StatusLeds.Dispose()
+                    StatusLeds = Nothing
+                    Log.Write("Removed existing StatusLEDPanel from layout")
+                End If
+            Catch ex As Exception
+                Log.WriteException(ex, "Error removing existing Trend/Status controls")
+            End Try
+
+            ' Create and install the combined Trend/Status control at the prior TrendArrows slot (3,0)
+            Try
+                If TlpData IsNot Nothing Then
+                    If TrendStatusCombined Is Nothing Then
+                        TrendStatusCombined = New Controls.TrendStatusCombinedControl With {
+                            .BackColor = _customBackColor,
+                            .Dock = DockStyle.Fill,
+                            .Font = New Font(Me.Font, FontStyle.Bold)
+                        }
+                        TlpData.Controls.Add(TrendStatusCombined, 3, 0)
+                        TlpData.SetColumnSpan(TrendStatusCombined, 1)
+                        Log.Write("TrendStatusCombinedControl created and added to TlpData[3,0]")
+                    Else
+                        TrendStatusCombined.BackColor = _customBackColor
+                        TrendStatusCombined.Font = New Font(Me.Font, FontStyle.Bold)
+                    End If
+                Else
+                    Log.Write("WARNING: TlpData is Nothing - cannot add TrendStatusCombinedControl")
+                End If
+            Catch ex As Exception
+                Log.WriteException(ex, "Error creating TrendStatusCombinedControl dynamically")
+            End Try
+
+            ' New: Sunrise/Sunset panel at column 6, row 2
+            Try
+                If TlpData IsNot Nothing Then
+                    If SunriseSunset Is Nothing Then
+                        SunriseSunset = New Controls.SunriseSunsetPanel With {
+                            .BackColor = _customBackColor,
+                            .Dock = DockStyle.Fill,
+                            .Font = New Font(Me.Font, FontStyle.Bold),
+                            .Tag = "40.7128,-74.0060" ' TODO: set to station lat,lng
+                        }
+                        TlpData.Controls.Add(SunriseSunset, 5, 1)
+                        Log.Write("SunriseSunsetPanel created and added to TlpData[6,2]")
+                    Else
+                        SunriseSunset.BackColor = _customBackColor
+                        SunriseSunset.Font = New Font(Me.Font, FontStyle.Bold)
+                        If SunriseSunset.Tag Is Nothing OrElse String.IsNullOrWhiteSpace(SunriseSunset.Tag.ToString()) Then
+                            SunriseSunset.Tag = "40.7128,-74.0060" ' default placeholder
+                        End If
+                    End If
+                Else
+                    Log.Write("WARNING: TlpData is Nothing - cannot add SunriseSunsetPanel")
+                End If
+            Catch ex As Exception
+                Log.WriteException(ex, "Error creating SunriseSunsetPanel dynamically")
+            End Try
 
             Log.Write("Initialized custom controls.")
         Catch ex As Exception

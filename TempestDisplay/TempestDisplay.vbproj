@@ -17,12 +17,13 @@
 		<Company>PAROLE Software</Company>
 		<Copyright>©2025 PAROLE Software</Copyright>
 		<NeutralLanguage>en-US</NeutralLanguage>
-		<AssemblyVersion>25.12.15.665</AssemblyVersion>
-		<FileVersion>25.12.15.665</FileVersion>
+		<AssemblyVersion>25.12.18.748</AssemblyVersion>
+		<FileVersion>25.12.18.748</FileVersion>
 		<Version>$(AssemblyVersion)</Version>
 		<PackageVersion>$(AssemblyVersion)</PackageVersion>
 		<AnalysisLevel>latest</AnalysisLevel>
 		<PackageIcon>weather_128.png</PackageIcon>
+		<ApplicationIcon>Clock.ico</ApplicationIcon>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -52,12 +53,46 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+	  <Compile Remove="Documents\BugFixes\**" />
+	  <EmbeddedResource Remove="Documents\BugFixes\**" />
+	  <None Remove="Documents\BugFixes\**" />
+	</ItemGroup>
+
+	<ItemGroup>
 	  <Compile Remove="FrmMain.Partials\FrmMain.UdpListener.EXAMPLE.vb" />
 	  <Compile Remove="FrmMain.Partials\FrmMain.UdpListener.ORIGINAL.BACKUP.vb" />
 	  <Compile Remove="FrmMain.Partials\FrmMain.UdpListener.TEMP.vb" />
 	</ItemGroup>
 
 	<ItemGroup>
+	  <None Remove="Documents\AIR_DENSITY_GUIDE.md" />
+	  <None Remove="Documents\AIR_DENSITY_SUMMARY.md" />
+	  <None Remove="Documents\APP_MANIFEST_ANALYSIS.md" />
+	  <None Remove="Documents\APP_MANIFEST_QUICK_REF.md" />
+	  <None Remove="Documents\BEFORE_AFTER_COMPARISON.md" />
+	  <None Remove="Documents\CLEANUP_DUPLICATES.bat" />
+	  <None Remove="Documents\CODE_INTEGRATION_COMPLETE.md" />
+	  <None Remove="Documents\Directory.Build.props" />
+	  <None Remove="Documents\DUPLICATE_CLEANUP_SUMMARY.md" />
+	  <None Remove="Documents\DYNAMIC_CONTROL_CREATION.md" />
+	  <None Remove="Documents\FIX_DUPLICATE_ISSUE.md" />
+	  <None Remove="Documents\LIGHTNING_TRACKING_FEATURE.md" />
+	  <None Remove="Documents\LOG_ANALYSIS_AND_FIX.md" />
+	  <None Remove="Documents\NULL_REFERENCE_FIX.md" />
+	  <None Remove="Documents\PRESSURE_ENHANCED_MANAGEMENT.md" />
+	  <None Remove="Documents\PRESSURE_PERSISTENCE_FEATURE.md" />
+	  <None Remove="Documents\PRESSURE_TREND_FEATURE.md" />
+	  <None Remove="Documents\QUICK_START_CLEANUP.md" />
+	  <None Remove="Documents\RAIN_DATA_RETRY_LOGIC.md" />
+	  <None Remove="Documents\RAIN_GAUGE_INTEGRATION.md" />
+	  <None Remove="Documents\REFACTORING_ARCHITECTURE.md" />
+	  <None Remove="Documents\REFACTORING_SUMMARY.md" />
+	  <None Remove="Documents\REFACTORING_TESTING_CHECKLIST.md" />
+	  <None Remove="Documents\REST_API_REMOVAL_SUMMARY.md" />
+	  <None Remove="Documents\ROLLBACK_REFACTORING.bat" />
+	  <None Remove="Documents\STATION_NAME_DISPLAY_UPDATE.md" />
+	  <None Remove="Documents\WEATHER_CALCULATIONS_GUIDE.md" />
+	  <None Remove="Documents\YESTERDAY_RAIN_ADDED.md" />
 	  <None Remove="Modules\UdpListener\FIREWALL_CONFIG_GUIDE.md" />
 	  <None Remove="Modules\UdpListener\FIREWALL_QUICK_REF.md" />
 	  <None Remove="Modules\UdpListener\INTEGRATION_GUIDE.md" />
@@ -66,6 +101,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <Content Include="Clock.ico" />
 	  <Content Include="weather.ico" />
 	</ItemGroup>
 
@@ -114,6 +150,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<Folder Include="Documents\" />
 		<Folder Include="Images\" />
 		<Folder Include="AppSettings\" />
 	</ItemGroup>
