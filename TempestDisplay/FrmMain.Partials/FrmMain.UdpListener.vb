@@ -317,7 +317,9 @@ Partial Public Class FrmMain
                     rainMonthIn,
                     rainYearIn,
                     data.WindAvgMph,
-                    data.WindDirection)
+                    data.WindDirection,
+                    data.UvIndex,
+                    data.SolarRadiation)
             Catch ex As Exception
                 Log.WriteException(ex, "[HiLo] Error updating daily hi/lo from UDP observation")
             End Try

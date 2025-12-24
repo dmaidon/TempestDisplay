@@ -1,3 +1,4 @@
+Imports System.IO
 Imports System.Net
 Imports System.Net.Sockets
 Imports System.Text
@@ -15,6 +16,12 @@ Public Class WeatherFlowUdpListener
     Private _isListening As Boolean = False
     Private _listenerTask As Task
     Private ReadOnly _cancellationTokenSource As CancellationTokenSource
+    Private _disposed As Boolean
+
+    ' Daily message log tracking
+    Private _currentLogDate As Date = Date.MinValue
+
+    Private _currentLogPath As String = Nothing
 
     ' Events for different message types
     Public Event RapidWindReceived As EventHandler(Of RapidWindEventArgs)
@@ -31,6 +38,8 @@ Public Class WeatherFlowUdpListener
 
     Public Event RawMessageReceived As EventHandler(Of RawMessageEventArgs)
 
+    Private _dailyLogTimer As Timer
+
     Public Sub New()
         _cancellationTokenSource = New CancellationTokenSource()
     End Sub
@@ -45,15 +54,21 @@ Public Class WeatherFlowUdpListener
         End If
 
         Try
+            ' Prepare daily message log for the current day
+            EnsureDailyMessageLogReady()
+
             ' Create UDP client that listens on port 50222
             _udpClient = New UdpClient(UDP_PORT) With {
                 .EnableBroadcast = True
             }
 
+            ' Start a timer that ensures the daily message log rolls over at midnight
+            StartDailyLogTimer()
+
             _isListening = True
             _listenerTask = Task.Run(AddressOf ListenForMessagesAsync, _cancellationTokenSource.Token)
 
-            Log.Write($"WeatherFlowUdpListener: Started listening on UDP port {UDP_PORT}")
+            Log.Write("WeatherFlowUdpListener: Started listening on UDP port " & UDP_PORT)
         Catch ex As Exception
             _isListening = False
             Log.WriteException(ex, "WeatherFlowUdpListener: Error starting UDP listener")
@@ -70,6 +85,12 @@ Public Class WeatherFlowUdpListener
         Try
             _isListening = False
             _cancellationTokenSource.Cancel()
+
+            ' Stop and dispose the daily log timer
+            If _dailyLogTimer IsNot Nothing Then
+                _dailyLogTimer.Dispose()
+                _dailyLogTimer = Nothing
+            End If
 
             If _udpClient IsNot Nothing Then
                 _udpClient.Close()
@@ -104,6 +125,9 @@ Public Class WeatherFlowUdpListener
 
                     ' Convert bytes to string
                     Dim jsonMessage = Encoding.UTF8.GetString(receivedBytes)
+
+                    ' Ensure the daily log file is ready for the current date
+                    EnsureDailyMessageLogReady()
 
                     ' Raise raw message event
                     RaiseEvent RawMessageReceived(Me, New RawMessageEventArgs(jsonMessage, remoteEP))
@@ -171,12 +195,12 @@ Public Class WeatherFlowUdpListener
                             ProcessLightningStrike(root, remoteEP)
 
                         Case Else
-                            Log.Write($"WeatherFlowUdpListener: Unknown message type '{messageType}' from {remoteEP.Address}")
+                            Log.Write("WeatherFlowUdpListener: Unknown message type '" & messageType & "' from " & remoteEP.Address.ToString())
                     End Select
                 End If
             End Using
         Catch ex As JsonException
-            Log.WriteException(ex, $"WeatherFlowUdpListener: JSON parse error from {remoteEP.Address}")
+            Log.WriteException(ex, "WeatherFlowUdpListener: JSON parse error from " & remoteEP.Address.ToString())
         Catch ex As Exception
             Log.WriteException(ex, "WeatherFlowUdpListener: Error parsing message")
         End Try
@@ -267,7 +291,8 @@ Public Class WeatherFlowUdpListener
                         .RemoteEndPoint = remoteEP
                     }
 
-                    Log.Write($"WeatherFlowUdpListener: Rain start event at {args.Timestamp:yyyy-MM-dd HH:mm:ss}")
+                    Log.Write("WeatherFlowUdpListener: Rain start event at " & args.Timestamp.ToString("yyyy-MM-dd HH:mm:ss"))
+                    AppendDailyMessageLog("RainStart " & args.Timestamp.ToString("yyyy-MM-dd HH:mm:ss"))
                     RaiseEvent RainStartReceived(Me, args)
                 End If
             End If
@@ -293,7 +318,8 @@ Public Class WeatherFlowUdpListener
                         .RemoteEndPoint = remoteEP
                     }
 
-                    Log.Write($"WeatherFlowUdpListener: Lightning strike at {args.Timestamp:yyyy-MM-dd HH:mm:ss}, distance: {distance}km, energy: {energy}")
+                    Log.Write("WeatherFlowUdpListener: Lightning strike at " & args.Timestamp.ToString("yyyy-MM-dd HH:mm:ss") & ", distance: " & distance & "km, energy: " & energy)
+                    AppendDailyMessageLog("LightningStrike " & args.Timestamp.ToString("yyyy-MM-dd HH:mm:ss") & " dist=" & distance & "km energy=" & energy)
                     RaiseEvent LightningStrikeReceived(Me, args)
                 End If
             End If
@@ -302,9 +328,67 @@ Public Class WeatherFlowUdpListener
         End Try
     End Sub
 
+    Private Sub EnsureDailyMessageLogReady()
+        Try
+            Dim todayDate As Date = Date.Today
+            If _currentLogDate <> todayDate OrElse String.IsNullOrEmpty(_currentLogPath) Then
+                _currentLogDate = todayDate
+                Dim fileName = "msg_" & todayDate.ToString("MMMd") & ".log"
+                Dim dir = Globals.LogDir
+                If Not Directory.Exists(dir) Then Directory.CreateDirectory(dir)
+                _currentLogPath = Path.Combine(dir, fileName)
+                If Not File.Exists(_currentLogPath) Then
+                    File.WriteAllText(_currentLogPath, "# Message log for " & todayDate.ToString("yyyy-MM-dd") & Environment.NewLine)
+                End If
+            End If
+        Catch ex As Exception
+            Log.WriteException(ex, "WeatherFlowUdpListener: Error preparing daily message log")
+        End Try
+    End Sub
+
+    Private Sub AppendDailyMessageLog(line As String)
+        Try
+            EnsureDailyMessageLogReady()
+            Dim entry = DateTime.Now.ToString("HH:mm:ss") & " " & line
+            File.AppendAllText(_currentLogPath, entry & Environment.NewLine)
+        Catch ex As Exception
+            Log.WriteException(ex, "WeatherFlowUdpListener: Error writing daily message log")
+        End Try
+    End Sub
+
+    Private Sub StartDailyLogTimer()
+        ' Calculate due time until next midnight
+        Dim now = DateTime.Now
+        Dim nextMidnight = now.Date.AddDays(1)
+        Dim due = nextMidnight - now
+
+        ' First tick at midnight, then every 24 hours
+        _dailyLogTimer = New Timer(AddressOf DailyLogTimerCallback, Nothing, due, TimeSpan.FromDays(1))
+    End Sub
+
+    Private Sub DailyLogTimerCallback(state As Object)
+        Try
+            EnsureDailyMessageLogReady()
+        Catch ex As Exception
+            Log.WriteException(ex, "WeatherFlowUdpListener: Error in daily log rollover timer")
+        End Try
+    End Sub
+
+    Protected Overridable Sub Dispose(disposing As Boolean)
+        If _disposed Then Return
+        Try
+            If disposing Then
+                StopListening()
+                _cancellationTokenSource?.Dispose()
+            End If
+        Finally
+            _disposed = True
+        End Try
+    End Sub
+
     Public Sub Dispose() Implements IDisposable.Dispose
-        StopListening()
-        _cancellationTokenSource?.Dispose()
+        Dispose(True)
+        GC.SuppressFinalize(Me)
     End Sub
 
 End Class

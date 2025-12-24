@@ -16,6 +16,8 @@ Friend Module Globals
 
     Friend AppStarts As Long = 0
 
+    Friend ErrCount As Integer = 0
+
     ' Global cancellation token for graceful shutdown
     Friend ReadOnly AppCancellationTokenSource As New CancellationTokenSource()
 

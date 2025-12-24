@@ -201,7 +201,19 @@ Public Class TempThermometerControl
 
         ' Calculate dimensions
         Dim labelHeight As Single = If(String.IsNullOrEmpty(_label), 0, 25)
-        Dim bulbSize As Single = Math.Min(w * 0.4F, 35)
+
+        ' Detect screen resolution: consider 4K or better as >= 3840x2160
+        Dim screenSize = Screen.PrimaryScreen.Bounds.Size
+        Dim is4KorBetter As Boolean = (screenSize.Width >= 3840 AndAlso screenSize.Height >= 2160)
+
+        ' Bulb size: smaller on sub-4K to avoid disproportion
+        Dim bulbSize As Single
+        If is4KorBetter Then
+            bulbSize = Math.Min(w * 0.4F, 35)
+        Else
+            bulbSize = Math.Min(w * 0.3F, 24)
+        End If
+
         Dim tubeWidth As Single = Math.Min(w * 0.25F, 22)
         Dim scaleWidth As Single = Math.Min(w * 0.2F, 30)
 
@@ -405,6 +417,11 @@ Public Class TempThermometerControl
         End If
     End Sub
 
+    'Private Shared Sub DrawGlassTube(g As Graphics, cx As Single, tubeTop As Single, tubeWidth As Single)
+    '    ArgumentNullException.ThrowIfNull(g)
+    '    Dim tubeRect As New RectangleF(cx - tubeWidth / 2.0F, tubeTop, tubeWidth, 0) ' placeholder to keep method signature changes minimal
+    'End Sub
+
     Private Shared Sub DrawGlassTube(g As Graphics, cx As Single, tubeTop As Single, tubeWidth As Single, tubeHeight As Single)
         Dim tubeRect As New RectangleF(cx - tubeWidth / 2.0F, tubeTop, tubeWidth, tubeHeight)
 
@@ -472,8 +489,8 @@ Public Class TempThermometerControl
             unitSuffix = "F"
         End If
 
-        ' Use the same color logic as the mercury, based on Fahrenheit scale
-        Dim color As Color = GetTemperatureColor(tempF)
+        ' Use solid black for better readability instead of mercury color
+        Dim textColor As Color = Color.Black
 
         Using fmt As New StringFormat()
             fmt.Alignment = StringAlignment.Center
@@ -483,7 +500,7 @@ Public Class TempThermometerControl
                 Using shadowBrush As New SolidBrush(Color.FromArgb(40, 0, 0, 0))
                     g.DrawString(String.Format("{0:0.#}°{1}", displayValue, unitSuffix), fontVal, shadowBrush, cx + 1, cy + 1, fmt)
                 End Using
-                Using valueBrush As New SolidBrush(color)
+                Using valueBrush As New SolidBrush(textColor)
                     g.DrawString(String.Format("{0:0.#}°{1}", displayValue, unitSuffix), fontVal, valueBrush, cx, cy, fmt)
                 End Using
             End Using

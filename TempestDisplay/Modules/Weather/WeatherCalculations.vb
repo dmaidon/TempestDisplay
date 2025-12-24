@@ -31,7 +31,7 @@ Public Module WeatherCalculations
         Return TempestDisplay.Common.Weather.WeatherCalculations.GetAirDensityCategory(density)
     End Function
 
-    Public Function CalculateDensityAltitude(tempF As Double, pressureMb As Double, humidity As Double, Optional actualAltitudeFt As Double = 0) As Double
+    Public Function CalculateDensityAltitude(tempF As Double, pressureMb As Double, humidity As Double) As Double
         Return TempestDisplay.Common.Weather.WeatherCalculations.CalculateDensityAltitude(tempF, pressureMb, humidity)
     End Function
 

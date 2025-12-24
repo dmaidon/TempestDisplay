@@ -4,8 +4,8 @@
     <RootNamespace>TempestDisplay.Common</RootNamespace>
     <TargetFramework>net10.0-windows</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
-    <AssemblyVersion>25.12.18.122</AssemblyVersion>
-    <FileVersion>25.12.18.122</FileVersion>
+    <AssemblyVersion>25.12.24.193</AssemblyVersion>
+    <FileVersion>25.12.24.193</FileVersion>
   </PropertyGroup>
 
   <ItemGroup>

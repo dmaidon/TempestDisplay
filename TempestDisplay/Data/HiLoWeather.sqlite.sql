@@ -36,6 +36,14 @@ CREATE TABLE IF NOT EXISTS HiLoDaily (
     WindSpeedAvg REAL,                 -- running daily average mph
     WindDirAvg REAL,                   -- daily average direction degrees
 
+    -- UV Index
+    UVIndexHigh REAL,
+    UVIndexHighTime TEXT,
+
+    -- Solar Radiation (W/m²)
+    SolarRadiationHigh REAL,
+    SolarRadiationHighTime TEXT,
+
     LastUpdated TEXT NOT NULL          -- ISO-8601 timestamp
 );
 
@@ -67,6 +75,14 @@ CREATE TABLE IF NOT EXISTS HiLoAllTime (
     -- Record wind speed (mph)
     WindSpeedHigh REAL,
     WindSpeedHighTime TEXT,
+
+    -- Record UV Index
+    UVIndexHigh REAL,
+    UVIndexHighTime TEXT,
+
+    -- Record Solar Radiation (W/m²)
+    SolarRadiationHigh REAL,
+    SolarRadiationHighTime TEXT,
 
     -- Aggregate wind direction vector for long-term average
     WindDirSumX REAL,

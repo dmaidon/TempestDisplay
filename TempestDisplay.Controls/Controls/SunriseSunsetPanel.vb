@@ -71,14 +71,6 @@ Public Class SunriseSunsetPanel
 
     Protected Overrides Sub OnPaint(e As PaintEventArgs)
         MyBase.OnPaint(e)
-        ' Draw a subtle right-side boundary within the control to keep separation visible
-        Dim w As Integer = Me.ClientSize.Width
-        Dim h As Integer = Me.ClientSize.Height
-        Dim boundaryX As Integer = Math.Max(0, w - RightBoundaryGutter)
-        e.Graphics.SmoothingMode = SmoothingMode.None
-        Using boundaryPen As New Pen(Color.FromArgb(170, 170, 170), 1)
-            e.Graphics.DrawLine(boundaryPen, boundaryX, 0, boundaryX, h)
-        End Using
     End Sub
 
     Public Async Function FetchAndUpdateAsync(lat As Double, lng As Double, Optional dateParam As String = "today", Optional timeZoneId As String = Nothing) As Task

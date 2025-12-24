@@ -11,6 +11,15 @@
     ' New: Sunrise/Sunset panel
     Friend SunriseSunset As Controls.SunriseSunsetPanel
 
+    ' New: Replace FanGaugeControl with HumidityComfortGauge
+    Friend HumidityGauge As Controls.HumidityComfortGauge
+
+    ' New: Cloud base panel
+    Friend CloudBase As Controls.CloudBasePanel
+
+    ' New: Battery voltage display
+    Friend BatteryVoltage As Controls.BatteryVoltageControl
+
     Private Sub InitializeCustomcontrols()
 
         Try
@@ -125,35 +134,36 @@
                 End Try
             End If
 
-            ' Humidity gauge
-            If FgRH IsNot Nothing Then
-                FgRH.Label = "Relative Humidity"
-                FgRH.BackColor = _customBackColor
-                FgRH.Font = New Font(FgRH.Font, FontStyle.Bold)
-            Else
-                ' Create FgRH control dynamically if it doesn't exist
-                Log.Write("FgRH control is Nothing - creating dynamically")
-                Try
+            ' Humidity gauge - replace FanGaugeControl with HumidityComfortGauge
+            Try
+                ' Remove old FanGaugeControl if present
+                If FgRH IsNot Nothing AndAlso FgRH.Parent Is TlpData Then
+                    TlpData.Controls.Remove(FgRH)
+                    FgRH.Dispose()
+                    FgRH = Nothing
+                    Log.Write("Removed existing FanGaugeControl (FgRH) from layout")
+                End If
+
+                If HumidityGauge Is Nothing Then
                     If TlpData IsNot Nothing Then
-                        FgRH = New Controls.FanGaugeControl With {
-                            .Label = "Relative Humidity",
+                        HumidityGauge = New Controls.HumidityComfortGauge With {
                             .BackColor = _customBackColor,
                             .Dock = DockStyle.Fill
                         }
-                        FgRH.Font = New Font(FgRH.Font, FontStyle.Bold)
-
-                        ' Add to TableLayoutPanel at column 0, row 3 with column span of 2
-                        TlpData.Controls.Add(FgRH, 1, 0)
-                        TlpData.SetColumnSpan(FgRH, 2)
-
-                        Log.Write("FgRH control created and added to TlpData[2,0] with ColumnSpan=2")
+                        ' Place humidity gauge near thermometers; keep same grid position that FgRH used
+                        TlpData.Controls.Add(HumidityGauge, 1, 0)
+                        TlpData.SetColumnSpan(HumidityGauge, 2)
+                        Log.Write("HumidityComfortGauge created and added to TlpData[1,0] with ColumnSpan=2")
                     Else
-                        Log.Write("WARNING: TlpData is Nothing - cannot add FgRH")
+                        Log.Write("WARNING: TlpData is Nothing - cannot add HumidityComfortGauge")
                     End If
-                Catch ex As Exception
-                    Log.WriteException(ex, "Error creating FgRH control dynamically")
-                End Try
-            End If
+                Else
+                    HumidityGauge.BackColor = _customBackColor
+                    HumidityGauge.Dock = DockStyle.Fill
+                End If
+            Catch ex As Exception
+                Log.WriteException(ex, "Error creating HumidityComfortGauge dynamically")
+            End Try
 
             ' Precipitation control
             If PTC IsNot Nothing Then
@@ -229,7 +239,7 @@
                         Log.Write("WARNING: TlpData is Nothing - cannot add BaroPressure")
                     End If
                 Catch ex As Exception
-                    Log.WriteException(ex, "Error creating BaroPressure control dynamically")
+                    Log.WriteException(ex, "Error creating BarometerControl dynamically")
                 End Try
             End If
 
@@ -253,7 +263,7 @@
                         Log.Write("WARNING: TlpData is Nothing - cannot add AltAirDensity")
                     End If
                 Catch ex As Exception
-                    Log.WriteException(ex, "Error creating AltAirDensity control dynamically")
+                    Log.WriteException(ex, "Error creating AirDensityAltimeter dynamically")
                 End Try
             End If
 
@@ -301,7 +311,7 @@
                         Log.Write("WARNING: TlpData is Nothing - cannot add LightningRadar")
                     End If
                 Catch ex As Exception
-                    Log.WriteException(ex, "Error creating LightningRadar control dynamically")
+                    Log.WriteException(ex, "Error creating LightningProximityRadar dynamically")
                 End Try
             End If
 
@@ -389,7 +399,7 @@
                 Log.WriteException(ex, "Error creating TrendStatusCombinedControl dynamically")
             End Try
 
-            ' New: Sunrise/Sunset panel at column 6, row 2
+            ' New: Sunrise/Sunset panel at column 5, row 1
             Try
                 If TlpData IsNot Nothing Then
                     If SunriseSunset Is Nothing Then
@@ -400,12 +410,13 @@
                             .Tag = "40.7128,-74.0060" ' TODO: set to station lat,lng
                         }
                         TlpData.Controls.Add(SunriseSunset, 5, 1)
-                        Log.Write("SunriseSunsetPanel created and added to TlpData[6,2]")
+                        Log.Write("SunriseSunsetPanel created and added to TlpData[5,1]")
                     Else
                         SunriseSunset.BackColor = _customBackColor
                         SunriseSunset.Font = New Font(Me.Font, FontStyle.Bold)
-                        If SunriseSunset.Tag Is Nothing OrElse String.IsNullOrWhiteSpace(SunriseSunset.Tag.ToString()) Then
-                            SunriseSunset.Tag = "40.7128,-74.0060" ' default placeholder
+                        Dim tagStr As String = SunriseSunset.Tag?.ToString()
+                        If String.IsNullOrWhiteSpace(tagStr) Then
+                            SunriseSunset.Tag = "40.7128,-74.0060"
                         End If
                     End If
                 Else
@@ -413,6 +424,53 @@
                 End If
             Catch ex As Exception
                 Log.WriteException(ex, "Error creating SunriseSunsetPanel dynamically")
+            End Try
+
+            ' New: Cloud base panel to fill a single cell
+            Try
+                If CloudBase Is Nothing Then
+                    CloudBase = New Controls.CloudBasePanel With {
+                        .BackColor = _customBackColor,
+                        .Dock = DockStyle.Fill,
+                        .Margin = New Padding(0)
+                    }
+                    If TlpData IsNot Nothing Then
+                        TlpData.Controls.Add(CloudBase, 6, 2)
+                        Log.Write("CloudBasePanel created and added to TlpData[6,2]")
+                    Else
+                        Log.Write("WARNING: TlpData is Nothing - cannot add CloudBasePanel")
+                    End If
+                Else
+                    CloudBase.BackColor = _customBackColor
+                    CloudBase.Dock = DockStyle.Fill
+                    CloudBase.Margin = New Padding(0)
+                End If
+            Catch ex As Exception
+                Log.WriteException(ex, "Error creating CloudBasePanel dynamically")
+            End Try
+
+            ' New: Battery voltage display at TlpData[7,2]
+            Try
+                If BatteryVoltage Is Nothing Then
+                    BatteryVoltage = New Controls.BatteryVoltageControl With {
+                        .BackColor = _customBackColor,
+                        .Dock = DockStyle.Fill,
+                        .Margin = New Padding(0),
+                        .Voltage = 2.6F
+                    }
+                    If TlpData IsNot Nothing Then
+                        TlpData.Controls.Add(BatteryVoltage, 7, 2)
+                        Log.Write("BatteryVoltageControl created and added to TlpData[7,2]")
+                    Else
+                        Log.Write("WARNING: TlpData is Nothing - cannot add BatteryVoltageControl")
+                    End If
+                Else
+                    BatteryVoltage.BackColor = _customBackColor
+                    BatteryVoltage.Dock = DockStyle.Fill
+                    BatteryVoltage.Margin = New Padding(0)
+                End If
+            Catch ex As Exception
+                Log.WriteException(ex, "Error creating BatteryVoltageControl dynamically")
             End Try
 
             Log.Write("Initialized custom controls.")

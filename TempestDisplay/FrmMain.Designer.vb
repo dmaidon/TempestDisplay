@@ -47,6 +47,7 @@ Partial Class FrmMain
         SsTop = New StatusStrip()
         TsslTimesrun = New ToolStripStatusLabel()
         TsslMessages = New ToolStripStatusLabel()
+        TsslErrCount = New ToolStripStatusLabel()
         Tc = New TabControl()
         TpData = New TabPage()
         PnlData = New Panel()
@@ -78,6 +79,9 @@ Partial Class FrmMain
         LblAirDensity = New Label()
         LblAirDensityCat = New Label()
         LblCloudBase = New Label()
+        LblIP = New Label()
+        LblUpdate = New Label()
+        LblBatteryStatus = New Label()
         TlpWindSun = New TableLayoutPanel()
         LblPressTrend = New Label()
         LblBaroPress = New Label()
@@ -97,12 +101,14 @@ Partial Class FrmMain
         TpLogs = New TabPage()
         TcLogs = New TabControl()
         TpLogFiles = New TabPage()
+        Panel2 = New Panel()
+        BtnFindNext = New Button()
+        BtnFind = New Button()
+        TxtLogSearch = New TextBox()
+        LbLogs = New ListBox()
         PnlLogs = New Panel()
         Label24 = New Label()
         RtbLogs = New RichTextBox()
-        PnlUDPHistory = New Panel()
-        Label25 = New Label()
-        RtbUDP = New RichTextBox()
         TpCharts = New TabPage()
         PnlBatteryChart = New Panel()
         ChtBattery = New DataVisualization.Charting.Chart()
@@ -111,10 +117,6 @@ Partial Class FrmMain
         DgvHubStatus = New DataGridView()
         TpSettings = New TabPage()
         PnlSettings = New Panel()
-        GbAppData = New GroupBox()
-        LblBatteryStatus = New Label()
-        LblUpdate = New Label()
-        LblIP = New Label()
         GbStationData = New GroupBox()
         TxtStationElevation = New TextBox()
         Label16 = New Label()
@@ -176,8 +178,8 @@ Partial Class FrmMain
         TpLogs.SuspendLayout()
         TcLogs.SuspendLayout()
         TpLogFiles.SuspendLayout()
+        Panel2.SuspendLayout()
         PnlLogs.SuspendLayout()
-        PnlUDPHistory.SuspendLayout()
         TpCharts.SuspendLayout()
         PnlBatteryChart.SuspendLayout()
         CType(ChtBattery, ComponentModel.ISupportInitialize).BeginInit()
@@ -186,7 +188,6 @@ Partial Class FrmMain
         CType(DgvHubStatus, ComponentModel.ISupportInitialize).BeginInit()
         TpSettings.SuspendLayout()
         PnlSettings.SuspendLayout()
-        GbAppData.SuspendLayout()
         GbStationData.SuspendLayout()
         GbLogSettings.SuspendLayout()
         Panel1.SuspendLayout()
@@ -214,7 +215,6 @@ Partial Class FrmMain
         SsBottom.Size = New Size(1563, 32)
         SsBottom.SizingGrip = False
         SsBottom.TabIndex = 0
-        SsBottom.Text = "StatusStrip1"
         ' 
         ' TsslVer
         ' 
@@ -250,13 +250,12 @@ Partial Class FrmMain
         SsTop.BackColor = Color.FloralWhite
         SsTop.GripMargin = New Padding(0)
         SsTop.ImageScalingSize = New Size(24, 24)
-        SsTop.Items.AddRange(New ToolStripItem() {TsslTimesrun, TsslMessages})
+        SsTop.Items.AddRange(New ToolStripItem() {TsslTimesrun, TsslMessages, TsslErrCount})
         SsTop.Location = New Point(0, 1024)
         SsTop.Name = "SsTop"
         SsTop.Size = New Size(1563, 32)
         SsTop.SizingGrip = False
         SsTop.TabIndex = 1
-        SsTop.Text = "StatusStrip2"
         ' 
         ' TsslTimesrun
         ' 
@@ -270,9 +269,17 @@ Partial Class FrmMain
         ' TsslMessages
         ' 
         TsslMessages.Name = "TsslMessages"
-        TsslMessages.Size = New Size(1526, 25)
+        TsslMessages.Size = New Size(1504, 25)
         TsslMessages.Spring = True
         TsslMessages.Text = "-"
+        ' 
+        ' TsslErrCount
+        ' 
+        TsslErrCount.Font = New Font("Segoe UI", 9.0F, FontStyle.Bold)
+        TsslErrCount.ForeColor = Color.ForestGreen
+        TsslErrCount.Name = "TsslErrCount"
+        TsslErrCount.Size = New Size(22, 25)
+        TsslErrCount.Text = "0"
         ' 
         ' Tc
         ' 
@@ -313,6 +320,7 @@ Partial Class FrmMain
         ' 
         ' TlpData
         ' 
+        TlpData.AutoSizeMode = AutoSizeMode.GrowAndShrink
         TlpData.CellBorderStyle = TableLayoutPanelCellBorderStyle.OutsetDouble
         TlpData.ColumnCount = 8
         TlpData.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 12.5F))
@@ -701,6 +709,9 @@ Partial Class FrmMain
         TableLayoutPanel1.Controls.Add(LblAirDensity, 0, 1)
         TableLayoutPanel1.Controls.Add(LblAirDensityCat, 0, 2)
         TableLayoutPanel1.Controls.Add(LblCloudBase, 0, 0)
+        TableLayoutPanel1.Controls.Add(LblIP, 0, 9)
+        TableLayoutPanel1.Controls.Add(LblUpdate, 0, 8)
+        TableLayoutPanel1.Controls.Add(LblBatteryStatus, 0, 6)
         TableLayoutPanel1.Dock = DockStyle.Fill
         TableLayoutPanel1.Location = New Point(3, 629)
         TableLayoutPanel1.Name = "TableLayoutPanel1"
@@ -764,6 +775,45 @@ Partial Class FrmMain
         LblCloudBase.Tag = "Cloud Base: {0} ft"
         LblCloudBase.Text = "Cloud Base"
         LblCloudBase.TextAlign = ContentAlignment.MiddleCenter
+        ' 
+        ' LblIP
+        ' 
+        LblIP.BorderStyle = BorderStyle.Fixed3D
+        TableLayoutPanel1.SetColumnSpan(LblIP, 2)
+        LblIP.Dock = DockStyle.Fill
+        LblIP.Location = New Point(4, 271)
+        LblIP.Name = "LblIP"
+        LblIP.Size = New Size(372, 38)
+        LblIP.TabIndex = 15
+        LblIP.Text = "ip"
+        LblIP.TextAlign = ContentAlignment.MiddleCenter
+        ' 
+        ' LblUpdate
+        ' 
+        LblUpdate.BorderStyle = BorderStyle.Fixed3D
+        TableLayoutPanel1.SetColumnSpan(LblUpdate, 2)
+        LblUpdate.Dock = DockStyle.Fill
+        LblUpdate.Location = New Point(4, 241)
+        LblUpdate.Name = "LblUpdate"
+        LblUpdate.Size = New Size(372, 29)
+        LblUpdate.TabIndex = 16
+        LblUpdate.Tag = "Updated: {0}"
+        LblUpdate.Text = "last update"
+        LblUpdate.TextAlign = ContentAlignment.MiddleCenter
+        ' 
+        ' LblBatteryStatus
+        ' 
+        LblBatteryStatus.BorderStyle = BorderStyle.Fixed3D
+        TableLayoutPanel1.SetColumnSpan(LblBatteryStatus, 2)
+        LblBatteryStatus.Dock = DockStyle.Fill
+        LblBatteryStatus.Font = New Font("Microsoft Sans Serif", 8.0F, FontStyle.Bold)
+        LblBatteryStatus.Location = New Point(4, 181)
+        LblBatteryStatus.Name = "LblBatteryStatus"
+        LblBatteryStatus.Size = New Size(372, 29)
+        LblBatteryStatus.TabIndex = 17
+        LblBatteryStatus.Tag = "Battery Voltage: {0:N2}v"
+        LblBatteryStatus.Text = "Battery Voltage"
+        LblBatteryStatus.TextAlign = ContentAlignment.MiddleCenter
         ' 
         ' TlpWindSun
         ' 
@@ -1023,9 +1073,9 @@ Partial Class FrmMain
         ' 
         TpLogs.BorderStyle = BorderStyle.Fixed3D
         TpLogs.Controls.Add(TcLogs)
-        TpLogs.Location = New Point(4, 34)
+        TpLogs.Location = New Point(4, 30)
         TpLogs.Name = "TpLogs"
-        TpLogs.Size = New Size(1555, 946)
+        TpLogs.Size = New Size(1555, 950)
         TpLogs.TabIndex = 3
         TpLogs.Text = "Logs"
         TpLogs.UseVisualStyleBackColor = True
@@ -1044,24 +1094,73 @@ Partial Class FrmMain
         ' 
         ' TpLogFiles
         ' 
+        TpLogFiles.BackColor = Color.Black
         TpLogFiles.BorderStyle = BorderStyle.Fixed3D
+        TpLogFiles.Controls.Add(Panel2)
         TpLogFiles.Controls.Add(PnlLogs)
-        TpLogFiles.Controls.Add(PnlUDPHistory)
         TpLogFiles.Location = New Point(4, 30)
         TpLogFiles.Name = "TpLogFiles"
         TpLogFiles.Padding = New Padding(3)
         TpLogFiles.Size = New Size(1543, 909)
         TpLogFiles.TabIndex = 0
         TpLogFiles.Text = "Logs"
-        TpLogFiles.UseVisualStyleBackColor = True
+        ' 
+        ' Panel2
+        ' 
+        Panel2.BackColor = Color.AntiqueWhite
+        Panel2.BorderStyle = BorderStyle.Fixed3D
+        Panel2.Controls.Add(BtnFindNext)
+        Panel2.Controls.Add(BtnFind)
+        Panel2.Controls.Add(TxtLogSearch)
+        Panel2.Controls.Add(LbLogs)
+        Panel2.Dock = DockStyle.Left
+        Panel2.Location = New Point(3, 3)
+        Panel2.Name = "Panel2"
+        Panel2.Size = New Size(759, 899)
+        Panel2.TabIndex = 2
+        ' 
+        ' BtnFindNext
+        ' 
+        BtnFindNext.Location = New Point(504, 681)
+        BtnFindNext.Name = "BtnFindNext"
+        BtnFindNext.Size = New Size(112, 34)
+        BtnFindNext.TabIndex = 5
+        BtnFindNext.Text = "Find Next"
+        BtnFindNext.UseVisualStyleBackColor = True
+        ' 
+        ' BtnFind
+        ' 
+        BtnFind.Location = New Point(340, 681)
+        BtnFind.Name = "BtnFind"
+        BtnFind.Size = New Size(112, 34)
+        BtnFind.TabIndex = 4
+        BtnFind.Text = "Find"
+        BtnFind.UseVisualStyleBackColor = True
+        ' 
+        ' TxtLogSearch
+        ' 
+        TxtLogSearch.Location = New Point(138, 684)
+        TxtLogSearch.Name = "TxtLogSearch"
+        TxtLogSearch.Size = New Size(150, 29)
+        TxtLogSearch.TabIndex = 3
+        ' 
+        ' LbLogs
+        ' 
+        LbLogs.Font = New Font("Segoe UI", 9.0F, FontStyle.Bold Or FontStyle.Italic, GraphicsUnit.Point, CByte(0))
+        LbLogs.FormattingEnabled = True
+        LbLogs.Location = New Point(220, 179)
+        LbLogs.Name = "LbLogs"
+        LbLogs.Size = New Size(314, 454)
+        LbLogs.TabIndex = 2
         ' 
         ' PnlLogs
         ' 
+        PnlLogs.BackColor = Color.AntiqueWhite
         PnlLogs.BorderStyle = BorderStyle.Fixed3D
         PnlLogs.Controls.Add(Label24)
         PnlLogs.Controls.Add(RtbLogs)
-        PnlLogs.Dock = DockStyle.Left
-        PnlLogs.Location = New Point(3, 3)
+        PnlLogs.Dock = DockStyle.Right
+        PnlLogs.Location = New Point(777, 3)
         PnlLogs.Name = "PnlLogs"
         PnlLogs.Size = New Size(759, 899)
         PnlLogs.TabIndex = 1
@@ -1087,39 +1186,6 @@ Partial Class FrmMain
         RtbLogs.Size = New Size(667, 799)
         RtbLogs.TabIndex = 0
         RtbLogs.Text = ""
-        ' 
-        ' PnlUDPHistory
-        ' 
-        PnlUDPHistory.BorderStyle = BorderStyle.Fixed3D
-        PnlUDPHistory.Controls.Add(Label25)
-        PnlUDPHistory.Controls.Add(RtbUDP)
-        PnlUDPHistory.Dock = DockStyle.Right
-        PnlUDPHistory.Location = New Point(777, 3)
-        PnlUDPHistory.Name = "PnlUDPHistory"
-        PnlUDPHistory.Size = New Size(759, 899)
-        PnlUDPHistory.TabIndex = 2
-        ' 
-        ' Label25
-        ' 
-        Label25.AutoSize = True
-        Label25.Font = New Font("Segoe UI", 18.0F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
-        Label25.Location = New Point(294, 17)
-        Label25.Name = "Label25"
-        Label25.Size = New Size(167, 48)
-        Label25.TabIndex = 2
-        Label25.Text = "UDP Log"
-        ' 
-        ' RtbUDP
-        ' 
-        RtbUDP.BackColor = Color.FloralWhite
-        RtbUDP.Location = New Point(44, 73)
-        RtbUDP.Name = "RtbUDP"
-        RtbUDP.ReadOnly = True
-        RtbUDP.ScrollBars = RichTextBoxScrollBars.ForcedBoth
-        RtbUDP.ShowSelectionMargin = True
-        RtbUDP.Size = New Size(667, 799)
-        RtbUDP.TabIndex = 1
-        RtbUDP.Text = ""
         ' 
         ' TpCharts
         ' 
@@ -1235,10 +1301,10 @@ Partial Class FrmMain
         ' 
         TpSettings.BorderStyle = BorderStyle.Fixed3D
         TpSettings.Controls.Add(PnlSettings)
-        TpSettings.Location = New Point(4, 30)
+        TpSettings.Location = New Point(4, 34)
         TpSettings.Name = "TpSettings"
         TpSettings.Padding = New Padding(3)
-        TpSettings.Size = New Size(1555, 950)
+        TpSettings.Size = New Size(1555, 946)
         TpSettings.TabIndex = 1
         TpSettings.Text = "Settings"
         TpSettings.UseVisualStyleBackColor = True
@@ -1247,7 +1313,6 @@ Partial Class FrmMain
         ' 
         PnlSettings.BackColor = Color.Gainsboro
         PnlSettings.BorderStyle = BorderStyle.Fixed3D
-        PnlSettings.Controls.Add(GbAppData)
         PnlSettings.Controls.Add(GbStationData)
         PnlSettings.Controls.Add(GbLogSettings)
         PnlSettings.Controls.Add(Panel1)
@@ -1257,54 +1322,8 @@ Partial Class FrmMain
         PnlSettings.Dock = DockStyle.Fill
         PnlSettings.Location = New Point(3, 3)
         PnlSettings.Name = "PnlSettings"
-        PnlSettings.Size = New Size(1545, 940)
+        PnlSettings.Size = New Size(1545, 936)
         PnlSettings.TabIndex = 0
-        ' 
-        ' GbAppData
-        ' 
-        GbAppData.BackColor = Color.Honeydew
-        GbAppData.Controls.Add(LblBatteryStatus)
-        GbAppData.Controls.Add(LblUpdate)
-        GbAppData.Controls.Add(LblIP)
-        GbAppData.Location = New Point(64, 712)
-        GbAppData.Name = "GbAppData"
-        GbAppData.Size = New Size(330, 159)
-        GbAppData.TabIndex = 9
-        GbAppData.TabStop = False
-        GbAppData.Text = "Application Data"
-        ' 
-        ' LblBatteryStatus
-        ' 
-        LblBatteryStatus.BorderStyle = BorderStyle.Fixed3D
-        LblBatteryStatus.Font = New Font("Microsoft Sans Serif", 8.0F, FontStyle.Bold)
-        LblBatteryStatus.Location = New Point(18, 101)
-        LblBatteryStatus.Name = "LblBatteryStatus"
-        LblBatteryStatus.Size = New Size(294, 30)
-        LblBatteryStatus.TabIndex = 15
-        LblBatteryStatus.Tag = "Battery Voltage: {0:N2}v"
-        LblBatteryStatus.Text = "Battery Voltage"
-        LblBatteryStatus.TextAlign = ContentAlignment.MiddleCenter
-        ' 
-        ' LblUpdate
-        ' 
-        LblUpdate.BorderStyle = BorderStyle.Fixed3D
-        LblUpdate.Location = New Point(18, 64)
-        LblUpdate.Name = "LblUpdate"
-        LblUpdate.Size = New Size(294, 30)
-        LblUpdate.TabIndex = 13
-        LblUpdate.Tag = "Updated: {0}"
-        LblUpdate.Text = "last update"
-        LblUpdate.TextAlign = ContentAlignment.MiddleCenter
-        ' 
-        ' LblIP
-        ' 
-        LblIP.BorderStyle = BorderStyle.Fixed3D
-        LblIP.Location = New Point(18, 27)
-        LblIP.Name = "LblIP"
-        LblIP.Size = New Size(294, 30)
-        LblIP.TabIndex = 14
-        LblIP.Text = "ip"
-        LblIP.TextAlign = ContentAlignment.MiddleCenter
         ' 
         ' GbStationData
         ' 
@@ -1741,7 +1760,6 @@ Partial Class FrmMain
         SsObs_St.Size = New Size(1563, 32)
         SsObs_St.SizingGrip = False
         SsObs_St.TabIndex = 4
-        SsObs_St.Text = "StatusStrip2"
         ' 
         ' ToolStripStatusLabel1
         ' 
@@ -1803,10 +1821,10 @@ Partial Class FrmMain
         TpLogs.ResumeLayout(False)
         TcLogs.ResumeLayout(False)
         TpLogFiles.ResumeLayout(False)
+        Panel2.ResumeLayout(False)
+        Panel2.PerformLayout()
         PnlLogs.ResumeLayout(False)
         PnlLogs.PerformLayout()
-        PnlUDPHistory.ResumeLayout(False)
-        PnlUDPHistory.PerformLayout()
         TpCharts.ResumeLayout(False)
         PnlBatteryChart.ResumeLayout(False)
         CType(ChtBattery, ComponentModel.ISupportInitialize).EndInit()
@@ -1815,7 +1833,6 @@ Partial Class FrmMain
         CType(DgvHubStatus, ComponentModel.ISupportInitialize).EndInit()
         TpSettings.ResumeLayout(False)
         PnlSettings.ResumeLayout(False)
-        GbAppData.ResumeLayout(False)
         GbStationData.ResumeLayout(False)
         GbStationData.PerformLayout()
         GbLogSettings.ResumeLayout(False)
@@ -1899,10 +1916,7 @@ Partial Class FrmMain
     Friend WithEvents Label22 As Label
     Friend WithEvents SsObs_St As StatusStrip
     Friend WithEvents ToolStripStatusLabel1 As ToolStripStatusLabel
-    Friend WithEvents PnlUDPHistory As Panel
-    Friend WithEvents RtbUDP As RichTextBox
     Friend WithEvents Label24 As Label
-    Friend WithEvents Label25 As Label
     Friend WithEvents TTip As ToolTip
     Friend WithEvents TsslObs_St As ToolStripStatusLabel
     Friend WithEvents DgvRecords As DataGridView
@@ -1941,10 +1955,6 @@ Partial Class FrmMain
     Friend WithEvents TpGrids As TabPage
     Friend WithEvents DgvObsSt As DataGridView
     Friend WithEvents DgvHubStatus As DataGridView
-    Friend WithEvents GbAppData As GroupBox
-    Friend WithEvents LblUpdate As Label
-    Friend WithEvents LblIP As Label
-    Friend WithEvents LblBatteryStatus As Label
     Friend WithEvents TpExtraData As TabPage
     Friend WithEvents TlpPrecipLight As TableLayoutPanel
     Friend WithEvents Label13 As Label
@@ -1978,5 +1988,14 @@ Partial Class FrmMain
     Friend WithEvents LblAvgWindSpd As Label
     Friend WithEvents LblWindSpd As Label
     Friend WithEvents TlpExtraData As TableLayoutPanel
+    Friend WithEvents LblIP As Label
+    Friend WithEvents LblUpdate As Label
+    Friend WithEvents LblBatteryStatus As Label
+    Friend WithEvents LbLogs As ListBox
+    Friend WithEvents TsslErrCount As ToolStripStatusLabel
+    Friend WithEvents Panel2 As Panel
+    Friend WithEvents BtnFindNext As Button
+    Friend WithEvents BtnFind As Button
+    Friend WithEvents TxtLogSearch As TextBox
 
 End Class

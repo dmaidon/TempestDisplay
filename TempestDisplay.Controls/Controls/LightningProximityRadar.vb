@@ -106,7 +106,7 @@ Public Class LightningProximityRadar
         Dim size As Single = Math.Min(w, h)
         Dim cx As Single = w / 2.0F
         Dim cy As Single = h / 2.0F
-        Dim radius As Single = size / 2.0F - 35
+        Dim radius As Single = size / 2.0F - 30.0F  '-35
 
         ' Draw components
         DrawRadarBackground(g, cx, cy, radius)
@@ -114,7 +114,7 @@ Public Class LightningProximityRadar
         DrawStrikeHistory(g, cx, cy, radius)
         DrawCenter(g, cx, cy)
         DrawDistanceLabels(g, cx, cy, radius)
-        DrawStatusText(g, cx, cy + radius + 15)
+        DrawStatusText(g, cx, cy + radius + 8) '15
     End Sub
 
     Private Shared Sub DrawRadarBackground(g As Graphics, cx As Single, cy As Single, radius As Single)

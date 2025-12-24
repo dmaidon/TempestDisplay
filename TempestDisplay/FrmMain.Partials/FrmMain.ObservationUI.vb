@@ -6,7 +6,7 @@
     Private Sub UpdateWeatherUI(data As ObservationData, rawJson As String)
         Try
             ' Display raw packet in status label
-            If TsslObs_St IsNot Nothing Then
+            If Not Equals(TsslObs_St, Nothing) Then
                 TsslObs_St.Text = rawJson
             End If
 
@@ -35,6 +35,12 @@
             ' Update cloud base
             UpdateCloudBase(data)
 
+            ' Also update CloudBasePanel control if present
+            If Not Equals(CloudBase, Nothing) Then
+                CloudBase.CloudBaseFeet = CSng(TempestDisplay.Common.Weather.WeatherCalculations.CalculateCloudBase(data.TempF, data.Humidity) + SettingsRoutines.LoadSettings().StationElevation)
+                CloudBase.StationElevationFeet = CSng(SettingsRoutines.LoadSettings().StationElevation)
+            End If
+
             ' Track temp/humidity/wind histories for trend display
             AddTemperatureReading(data.TempF, data.TimestampDateTime)
             AddHumidityReading(data.Humidity, data.TimestampDateTime)
@@ -45,14 +51,14 @@
             Dim wTrend = CalculateWindTrend(data.WindAvgMph, data.TimestampDateTime)
 
             ' Update combined trend control if available
-            If TrendStatusCombined IsNot Nothing Then
+            If Not Equals(TrendStatusCombined, Nothing) Then
                 Dim ToDir As Integer = If(Not tTrend.HasData, 0, If(tTrend.Delta > 0, 1, If(tTrend.Delta < 0, -1, 0)))
                 Dim HoDir As Integer = If(Not hTrend.HasData, 0, If(hTrend.Delta > 0, 1, If(hTrend.Delta < 0, -1, 0)))
                 Dim WoDir As Integer = If(Not wTrend.HasData, 0, If(wTrend.Delta > 0, 1, If(wTrend.Delta < 0, -1, 0)))
                 TrendStatusCombined.SetTrend("Temp", ToDir)
                 TrendStatusCombined.SetTrend("Humid", HoDir)
                 TrendStatusCombined.SetTrend("Wind", WoDir)
-            ElseIf TrendArrows IsNot Nothing Then
+            ElseIf Not Equals(TrendArrows, Nothing) Then
                 Dim ToDir As Integer = If(Not tTrend.HasData, 0, If(tTrend.Delta > 0, 1, If(tTrend.Delta < 0, -1, 0)))
                 Dim HoDir As Integer = If(Not hTrend.HasData, 0, If(hTrend.Delta > 0, 1, If(hTrend.Delta < 0, -1, 0)))
                 Dim WoDir As Integer = If(Not wTrend.HasData, 0, If(wTrend.Delta > 0, 1, If(wTrend.Delta < 0, -1, 0)))
@@ -68,7 +74,7 @@
             UpdateBatteryStatus(data.Battery)
 
             ' Update last update time
-            If LblUpdate IsNot Nothing Then
+            If Not Equals(LblUpdate, Nothing) Then
                 LblUpdate.Text = $"Last Update: {data.TimestampDateTime:h:mm:ss tt}"
             End If
 
@@ -82,7 +88,7 @@
 
     Private Sub UpdateSunriseSunsetPanel()
         Try
-            If SunriseSunset Is Nothing Then Return
+            If Equals(SunriseSunset, Nothing) Then Return
             ' Expect Tag like "lat,lng" (e.g., "40.7128,-74.0060")
             Dim coords As String = TryCast(SunriseSunset.Tag, String)
             If String.IsNullOrWhiteSpace(coords) Then
@@ -107,7 +113,7 @@
 
     Private Sub UpdateWindRoseControl(data As ObservationData)
         Try
-            If WrWindSpeed IsNot Nothing Then
+            If Not Equals(WrWindSpeed, Nothing) Then
                 WrWindSpeed.WindSpeed = CSng(data.WindAvgMph)
                 WrWindSpeed.WindDirection = CSng(data.WindDirection)
                 WrWindSpeed.Refresh()
@@ -118,7 +124,7 @@
     End Sub
 
     Private Sub UpdateCurTempLabel(data As ObservationData)
-        If LblCurTemp IsNot Nothing Then
+        If Not Equals(LblCurTemp, Nothing) Then
             LblCurTemp.Font = New Font(LblCurTemp.Font.FontFamily, 36, FontStyle.Bold)
             LblCurTemp.ForeColor = Color.Maroon
             LblCurTemp.Text = $"{data.TempF:F1} °F"
@@ -126,7 +132,7 @@
     End Sub
 
     Private Sub UpdateCurWindslabel(data As ObservationData)
-        If LblCurWinds IsNot Nothing Then
+        If Not Equals(LblCurWinds, Nothing) Then
             LblCurWinds.Font = New Font(LblCurWinds.Font.FontFamily, 20, FontStyle.Bold)
             LblCurWinds.ForeColor = Color.Green
             LblCurWinds.Text = $"{data.WindAvgMph:F1} mph {DegreesToCardinal(data.WindDirection)}"
@@ -188,8 +194,10 @@
                 TgDewpoint.TempF = CSng(dewPoint)
             End If
 
-            ' Update humidity gauge
-            If FgRH IsNot Nothing Then
+            ' Update humidity gauge - new HumidityComfortGauge if present, else fallback
+            If HumidityGauge IsNot Nothing Then
+                HumidityGauge.Humidity = CSng(data.Humidity)
+            ElseIf FgRH IsNot Nothing Then
                 FgRH.Value = CSng(data.Humidity)
             End If
         Catch ex As Exception
@@ -374,6 +382,11 @@
                         LblBatteryStatus.BackColor = Color.Red
                         LblBatteryStatus.ForeColor = Color.White
                 End Select
+            End If
+
+            ' Update battery voltage control
+            If BatteryVoltage IsNot Nothing Then
+                UIService.SafeInvoke(BatteryVoltage, Sub() BatteryVoltage.Voltage = CSng(battery))
             End If
 
             ' Add battery reading to chart history

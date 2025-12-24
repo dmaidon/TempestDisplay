@@ -27,8 +27,29 @@ Public Class LogService
     Private ReadOnly _initLock As New Object()
     Private _minLogLevel As LogLevel = LogLevel.Info ' Default minimum log level
 
+    ' Event to notify when error count changes
+    Public Event ErrorCountChanged As EventHandler
+
     Private Sub New()
         ' private ctor
+    End Sub
+
+    ''' <summary>
+    ''' Raises the ErrorCountChanged event to notify UI
+    ''' </summary>
+    Private Sub RaiseErrorCountChanged()
+        Try
+            RaiseEvent ErrorCountChanged(Me, EventArgs.Empty)
+        Catch
+            ' Ignore event raising errors
+        End Try
+    End Sub
+
+    ''' <summary>
+    ''' Public method to trigger error count display update (e.g., after midnight reset)
+    ''' </summary>
+    Public Sub TriggerErrorCountUpdate()
+        RaiseErrorCountChanged()
     End Sub
 
     Public Sub Init()
@@ -238,6 +259,12 @@ Public Class LogService
                     Dim timestamped = $"[{Now:yyyy-MM-dd HH:mm:ss.fff}] {sb}"
                     _swError.WriteLine(timestamped)
                 End SyncLock
+
+                ' Increment error count
+                Threading.Interlocked.Increment(Globals.ErrCount)
+
+                ' Notify UI to update error count display
+                RaiseErrorCountChanged()
             End If
         Catch
             ' Swallow write exceptions

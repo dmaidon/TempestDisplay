@@ -13,6 +13,7 @@ Public Class HumidityComfortGauge
 
     Private _humidity As Single = 50
     Private _showComfortZones As Boolean = True
+    Private _labelText As String = "Relative Humidity"
 
     <Browsable(True)>
     <Category("Data")>
@@ -36,6 +37,19 @@ Public Class HumidityComfortGauge
         End Get
         Set(value As Boolean)
             _showComfortZones = value
+            Invalidate()
+        End Set
+    End Property
+
+    <Browsable(True)>
+    <Category("Appearance")>
+    <DefaultValue("Relative Humidity")>
+    Public Property LabelText As String
+        Get
+            Return _labelText
+        End Get
+        Set(value As String)
+            _labelText = If(String.IsNullOrWhiteSpace(value), "Relative Humidity", value)
             Invalidate()
         End Set
     End Property
@@ -65,6 +79,7 @@ Public Class HumidityComfortGauge
         DrawScale(g, cx, cy, radius)
         DrawCenterHub(g, cx, cy)
         DrawReadout(g, cx, cy, _humidity)
+        DrawLabel(g, cx, h, _labelText)
     End Sub
 
     Private Shared Sub DrawArcBackground(g As Graphics, cx As Single, cy As Single, radius As Single)
@@ -122,7 +137,7 @@ Public Class HumidityComfortGauge
                     For i = 0 To 100 Step 20
                         Dim angle = 180 + (i / 100.0) * 180
                         Dim angleRad = angle * Math.PI / 180
-                        Dim labelRadius = radius * 0.88F
+                        Dim labelRadius = radius * 0.88F   '.88
                         Dim x = CSng(cx + labelRadius * Math.Cos(angleRad))
                         Dim y = CSng(cy + labelRadius * Math.Sin(angleRad))
                         g.DrawString(i.ToString(), font, brush, x, y, fmt)
@@ -139,10 +154,21 @@ Public Class HumidityComfortGauge
     End Sub
 
     Private Shared Sub DrawReadout(g As Graphics, cx As Single, cy As Single, humidity As Single)
-        Using font As New Font("Segoe UI", 12, FontStyle.Bold)
+        Using font As New Font("Segoe UI", 12, FontStyle.Bold)  '12
             Using brush As New SolidBrush(Color.FromArgb(50, 50, 50))
                 Using fmt As New StringFormat() With {.Alignment = StringAlignment.Center, .LineAlignment = StringAlignment.Far}
-                    g.DrawString($"{humidity:0}%", font, brush, cx, cy - 10, fmt)
+                    g.DrawString($"{humidity:0}%", font, brush, cx, cy - 10, fmt)       '-10
+                End Using
+            End Using
+        End Using
+    End Sub
+
+    Private Shared Sub DrawLabel(g As Graphics, cx As Single, h As Single, text As String)
+        Using font As New Font("Segoe UI", 9.0F, FontStyle.Bold)
+            Using brush As New SolidBrush(Color.FromArgb(70, 70, 70))
+                Using fmt As New StringFormat() With {.Alignment = StringAlignment.Center, .LineAlignment = StringAlignment.Far}
+                    Dim bottomMargin As Single = 44.0F  '24
+                    g.DrawString(text, font, brush, cx, h - bottomMargin, fmt)
                 End Using
             End Using
         End Using
@@ -152,4 +178,5 @@ Public Class HumidityComfortGauge
         MyBase.OnResize(e)
         Invalidate()
     End Sub
+
 End Class

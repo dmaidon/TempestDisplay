@@ -411,13 +411,13 @@ Public Class FanGaugeControl
                 Using brushValue As New SolidBrush(Color.FromArgb(40, 40, 40))
                     ' Outer shadow
                     Using shadowBrush As New SolidBrush(Color.FromArgb(50, 0, 0, 0))
-                        g.DrawString(_value.ToString("0.#"), fontValue, shadowBrush, New PointF(cx + 2, cy + 11), fmt)
+                        g.DrawString(_value.ToString("0.#"), fontValue, shadowBrush, New PointF(cx + 2, cy + 21), fmt) '11
                     End Using
                     ' Inner shadow
                     Using shadowBrush2 As New SolidBrush(Color.FromArgb(25, 0, 0, 0))
-                        g.DrawString(_value.ToString("0.#"), fontValue, shadowBrush2, New PointF(cx + 1, cy + 10), fmt)
+                        g.DrawString(_value.ToString("0.#"), fontValue, shadowBrush2, New PointF(cx + 1, cy + 20), fmt)  '10
                     End Using
-                    g.DrawString(_value.ToString("0.#"), fontValue, brushValue, New PointF(cx, cy + 10), fmt)
+                    g.DrawString(_value.ToString("0.#"), fontValue, brushValue, New PointF(cx, cy + 20), fmt)  '10
                 End Using
             End Using
 
@@ -427,9 +427,9 @@ Public Class FanGaugeControl
                     Using brushUnder As New SolidBrush(Color.FromArgb(100, 100, 100))
                         ' Shadow for label
                         Using shadowBrush As New SolidBrush(Color.FromArgb(40, 0, 0, 0))
-                            g.DrawString(_label, fontUnder, shadowBrush, New PointF(cx + 1, cy + 36), fmt)
+                            g.DrawString(_label, fontUnder, shadowBrush, New PointF(cx + 1, cy + 46), fmt)      '36
                         End Using
-                        g.DrawString(_label, fontUnder, brushUnder, New PointF(cx, cy + 35), fmt)
+                        g.DrawString(_label, fontUnder, brushUnder, New PointF(cx, cy + 45), fmt)       '35
                     End Using
                 End Using
             End If

@@ -112,6 +112,16 @@ Partial Public Class FrmMain
                         Dim windRow As Integer = DgvRecords.Rows.Add("", "", $"Max Speed: {windSpeedStr}")
                         DgvRecords.Rows(windRow).HeaderCell.Value = "Wind"
 
+                        ' UV Index Record Row
+                        Dim uvStr As String = FormatValueTime(reader, "UVIndexHigh", "UVIndexHighTime", "")
+                        Dim uvRow As Integer = DgvRecords.Rows.Add($"Max: {uvStr}", "", "")
+                        DgvRecords.Rows(uvRow).HeaderCell.Value = "UV Index"
+
+                        ' Solar Radiation Record Row
+                        Dim solarStr As String = FormatValueTime(reader, "SolarRadiationHigh", "SolarRadiationHighTime", "W/m²")
+                        Dim solarRow As Integer = DgvRecords.Rows.Add("", $"Max: {solarStr}", "")
+                        DgvRecords.Rows(solarRow).HeaderCell.Value = "Solar"
+
                         ' Add separator and daily records header
                         DgvRecords.Rows.Add("", "", "")
                         Dim dailyHeaderRow As Integer = DgvRecords.Rows.Add("", "", "")

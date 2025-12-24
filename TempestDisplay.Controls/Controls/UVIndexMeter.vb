@@ -290,8 +290,9 @@ Public Class UVIndexMeter
                         End Using
                     Next
 
-                    ' Draw risk level labels
+                    ' Draw risk level labels - move up a few pixels so they're vertically centered relative to the scale
                     fmt.LineAlignment = StringAlignment.Far
+                    Dim labelYOffset As Single = -6.0F
                     Dim labels() As Tuple(Of Single, String) = {
                         Tuple.Create(1.0F, "Low"),
                         Tuple.Create(3.5F, "Mod"),
@@ -303,7 +304,7 @@ Public Class UVIndexMeter
                     For Each label In labels
                         If label.Item1 <= _maxUVIndex Then
                             Dim labelX As Single = x + (label.Item1 / _maxUVIndex) * width
-                            g.DrawString(label.Item2, font, brush, labelX, y, fmt)
+                            g.DrawString(label.Item2, font, brush, labelX, y + labelYOffset, fmt)
                         End If
                     Next
                 End Using
@@ -329,7 +330,7 @@ Public Class UVIndexMeter
                             End Using
 
                             g.DrawString(currentText, currentFont, currentBrush, cx, cy, fmt)
-                            g.DrawString(peakText, peakFont, peakBrush, cx, cy + 15, fmt)
+                            g.DrawString(peakText, peakFont, peakBrush, cx, cy + 15, fmt)            '15
                         End Using
                     End Using
                 End Using
@@ -337,7 +338,7 @@ Public Class UVIndexMeter
         End Using
     End Sub
 
-    Private Sub DrawRecommendation(g As Graphics, cx As Single, cy As Single, risk As UVRiskLevel)
+    Private Shared Sub DrawRecommendation(g As Graphics, cx As Single, cy As Single, risk As UVRiskLevel)
         Dim recommendation As String = GetRecommendation(risk)
 
         Using font As New Font("Segoe UI", 8.0F, FontStyle.Italic)
@@ -360,7 +361,7 @@ Public Class UVIndexMeter
         Return UVRiskLevel.Extreme
     End Function
 
-    Private Function GetUVColor(uvIndex As Single) As Color
+    Private Shared Function GetUVColor(uvIndex As Single) As Color
         Dim risk As UVRiskLevel = GetRiskLevel(uvIndex)
         Select Case risk
             Case UVRiskLevel.Low : Return Color.FromArgb(100, 200, 100)

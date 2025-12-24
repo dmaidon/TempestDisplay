@@ -4,6 +4,16 @@
         Try
             Log.Write("PerformMidnightUpdate: Starting midnight maintenance...")
 
+            ' Reset error count for the new day
+            Globals.ErrCount = 0
+            ' Trigger UI update for error count reset
+            Try
+                LogService.Instance.TriggerErrorCountUpdate()
+            Catch
+                ' Ignore if event raising fails
+            End Try
+            Log.Write("PerformMidnightUpdate: Error count reset to 0")
+
             ' Close current log file
             Try
                 Log.Write("PerformMidnightUpdate: Closing current log file")

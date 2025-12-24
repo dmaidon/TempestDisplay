@@ -30,6 +30,9 @@ Public Class FrmMain
         ' Initialize UDP log
         UdpLogService.Instance.Init()
 
+        ' Subscribe to error count changes
+        AddHandler LogService.Instance.ErrorCountChanged, AddressOf OnErrorCountChanged
+
         Try
             Text = System.Windows.Forms.Application.ProductName
             Dim ver = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version
@@ -94,13 +97,20 @@ Public Class FrmMain
         ' Setup watcher
         SetupSettingsFileWatcher()
 
+        ' Initialize RtbLogs context menu
+        Try
+            InitializeRtbLogsContextMenu()
+        Catch ex As Exception
+            Log.WriteException(ex, "Failed to initialize RtbLogs context menu")
+        End Try
+
         ' Start timer last (after everything is initialized)
         TmrClock.Start()
 
         Log.Write("FrmMain_Load: Exited")
     End Sub
 
-    Private Async Sub Tc_SelectedIndexChanged(sender As Object, e As EventArgs) Handles Tc.SelectedIndexChanged
+    Private Sub Tc_SelectedIndexChanged(sender As Object, e As EventArgs) Handles Tc.SelectedIndexChanged
         ' Capture all control values BEFORE any Await to avoid cross-thread issues
         Dim currentTabName As String = If(Tc.SelectedTab?.Name, "(unknown)")
         Dim current As TabPage = Tc.SelectedTab
@@ -114,59 +124,28 @@ Public Class FrmMain
                 Log.Write("DEBUG: Globals.LogFile = " & Globals.LogFile)
                 Log.Write("DEBUG: Globals.UdpLog = " & Globals.UdpLog)
                 Log.Write("DEBUG: RtbLogs is Nothing? " & (RtbLogs Is Nothing).ToString())
-                Log.Write("TpLogs tab entered, attempting to load log files.")
+                Log.Write("TpLogs tab entered, populating LbLogs from LogDir and clearing RtbLogs.")
 
-                ' Load main log file into RtbLogs
-                Dim logText As String = String.Empty
-                Dim logPath = Globals.LogFile
+                ' Populate LbLogs with files from LogDir
+                PopulateLogList()
 
-                If Not String.IsNullOrEmpty(logPath) AndAlso File.Exists(logPath) Then
-                    Try
-                        Using fs = New FileStream(logPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)
-                            Using sr = New StreamReader(fs)
-                                ' ConfigureAwait(True) ensures we return to UI thread
-                                logText = Await sr.ReadToEndAsync().ConfigureAwait(True)
-                            End Using
-                        End Using
-                        Log.Write("Main log file loaded successfully.")
-                    Catch ex As Exception
-                        Log.WriteException(ex, "Error reading main log file in TpLogs tab.")
-                    End Try
-                Else
-                    Log.Write("Main log file path is empty or file does not exist: " & logPath)
-                End If
-
+                ' Clear RtbLogs to disconnect auto-population
                 Try
-                    UIService.SafeSetText(RtbLogs, logText)
+                    UIService.SafeSetText(RtbLogs, "")
                 Catch ex As Exception
-                    Log.WriteException(ex, "Error setting RtbLogs text.")
+                    Log.WriteException(ex, "Error clearing RtbLogs text on TpLogs enter.")
                 End Try
 
-                ' Load UDP log file into RtbUdp (assuming you have this control)
-                Dim udpText As String = String.Empty
-                Dim udpPath = Globals.UdpLog
-
-                If Not String.IsNullOrEmpty(udpPath) AndAlso File.Exists(udpPath) Then
+                ' Also initialize battery chart if Charts tab is currently selected in nested TcLogs
+                If TcLogs IsNot Nothing AndAlso TcLogs.SelectedTab IsNot Nothing AndAlso TcLogs.SelectedTab.Name = "TpCharts" Then
+                    Log.Write("[Charts Tab] Entered Charts tab (nested in Logs), attempting to initialize battery chart")
                     Try
-                        Using fs = New FileStream(udpPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)
-                            Using sr = New StreamReader(fs)
-                                udpText = Await sr.ReadToEndAsync().ConfigureAwait(True)
-                            End Using
-                        End Using
-                        Log.Write("UDP log file loaded successfully.")
+                        InitializeBatteryChart()
+                        Log.Write("[Charts Tab] Battery chart initialization completed")
                     Catch ex As Exception
-                        Log.WriteException(ex, "Error reading UDP log file in TpLogs tab.")
+                        Log.WriteException(ex, "[Charts Tab] CRITICAL: Error initializing battery chart - this may cause issues")
                     End Try
-                Else
-                    Log.Write("UDP log file path is empty or file does not exist: " & udpPath)
                 End If
-
-                Try
-                    ' Assuming you have a RichTextBox named RtbUdp on TpLogs tab
-                    UIService.SafeSetText(RtbUDP, udpText)
-                Catch ex As Exception
-                    Log.WriteException(ex, "Error setting RtbUdp text.")
-                End Try
             End If
 
             ' Load HiLo records when Records tab is accessed
@@ -182,34 +161,77 @@ Public Class FrmMain
             Else
                 Log.Write($"[DEBUG] Not Records tab - Name comparison failed: '{current?.Name}' vs 'TpRecords'")
             End If
-
-            ' Initialize battery chart when Charts tab is first accessed
-            ' Battery chart is on TpCharts, which is on TcLogs, which is on TpLogs
-            If current IsNot Nothing AndAlso current.Name = "TpLogs" Then
-                ' Check if the nested TcLogs tab control has TpCharts selected
-                If TcLogs IsNot Nothing AndAlso TcLogs.SelectedTab IsNot Nothing AndAlso TcLogs.SelectedTab.Name = "TpCharts" Then
-                    Log.Write("[Charts Tab] Entered Charts tab (nested in Logs), attempting to initialize battery chart")
-                    Try
-                        InitializeBatteryChart()
-                        Log.Write("[Charts Tab] Battery chart initialization completed")
-                    Catch ex As Exception
-                        Log.WriteException(ex, "[Charts Tab] CRITICAL: Error initializing battery chart - this may cause issues")
-                        ' Don't rethrow - allow tab to load even if chart fails
-                    End Try
-                End If
-            End If
         Catch ex As Exception
             Log.WriteException(ex, "Error in Tc_SelectedIndexChanged")
         End Try
 
-        ' Update _previousTab (safe because we captured 'current' before Await)
+        ' Update _previousTab
         _previousTab = current
 
         ' Clear both RichTextBoxes when leaving TpLogs tab (use captured values)
         If previousTabName = "TpLogs" AndAlso currentTabName <> "TpLogs" Then
             UIService.SafeSetText(RtbLogs, "")
-            UIService.SafeSetText(RtbUDP, "")
         End If
+    End Sub
+
+    ''' <summary>
+    ''' Populate LbLogs with files from Globals.LogDir (sorted by LastWriteTime descending)
+    ''' </summary>
+    Private Sub PopulateLogList()
+        Try
+            LbLogs.BeginUpdate()
+            LbLogs.Items.Clear()
+
+            If Directory.Exists(Globals.LogDir) Then
+                Dim files = Directory.GetFiles(Globals.LogDir)
+                Dim sorted = files.OrderByDescending(Function(p) New FileInfo(p).LastWriteTime).ToArray()
+                For Each filePath In sorted
+                    ' Add only the filename for display
+                    LbLogs.Items.Add(Path.GetFileName(filePath))
+                Next
+            Else
+                Log.Write("PopulateLogList: LogDir does not exist: " & Globals.LogDir)
+            End If
+        Catch ex As Exception
+            Log.WriteException(ex, "PopulateLogList: Error populating log list")
+        Finally
+            LbLogs.EndUpdate()
+        End Try
+    End Sub
+
+    ''' <summary>
+    ''' When user selects a log in LbLogs, load the file into RtbLogs
+    ''' </summary>
+    Private Sub LbLogs_SelectedIndexChanged(sender As Object, e As EventArgs) Handles LbLogs.SelectedIndexChanged
+        Try
+            Dim fileName As String = TryCast(LbLogs.SelectedItem, String)
+            If String.IsNullOrEmpty(fileName) Then Return
+
+            Dim filePath As String = Path.Combine(Globals.LogDir, fileName)
+            If Not File.Exists(filePath) Then
+                Log.Write("LbLogs_SelectedIndexChanged: Selected file does not exist: " & filePath)
+                Return
+            End If
+
+            Dim text As String = String.Empty
+            Try
+                Using fs = New FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)
+                    Using sr = New StreamReader(fs)
+                        text = sr.ReadToEnd()
+                    End Using
+                End Using
+            Catch ex As Exception
+                Log.WriteException(ex, "LbLogs_SelectedIndexChanged: Error reading selected log file")
+            End Try
+
+            Try
+                UIService.SafeSetText(RtbLogs, text)
+            Catch ex As Exception
+                Log.WriteException(ex, "LbLogs_SelectedIndexChanged: Error setting RtbLogs text")
+            End Try
+        Catch ex As Exception
+            Log.WriteException(ex, "LbLogs_SelectedIndexChanged: Unexpected error")
+        End Try
     End Sub
 
     ''' <summary>
@@ -319,6 +341,44 @@ Public Class FrmMain
 
     Private Sub SsSky_Obs_ItemClicked(sender As Object, e As ToolStripItemClickedEventArgs)
 
+    End Sub
+
+    Private Sub TableLayoutPanel1_Paint(sender As Object, e As PaintEventArgs) Handles TableLayoutPanel1.Paint
+
+    End Sub
+
+    ''' <summary>
+    ''' Handle error count changes from LogService
+    ''' </summary>
+    Private Sub OnErrorCountChanged(sender As Object, e As EventArgs)
+        Try
+            If InvokeRequired Then
+                Invoke(New Action(Sub() UpdateErrorCountDisplay()))
+            Else
+                UpdateErrorCountDisplay()
+            End If
+        Catch ex As Exception
+            ' Can't log this as it might cause recursion
+        End Try
+    End Sub
+
+    ''' <summary>
+    ''' Update the error count display on the status strip
+    ''' </summary>
+    Private Sub UpdateErrorCountDisplay()
+        Try
+            Dim count = Globals.ErrCount
+            TsslErrCount.Text = count.ToString()
+
+            ' Change color to red if there are errors, green otherwise
+            If count > 0 Then
+                TsslErrCount.ForeColor = Color.Red
+            Else
+                TsslErrCount.ForeColor = Color.ForestGreen
+            End If
+        Catch ex As Exception
+            ' Can't log this as it might cause recursion
+        End Try
     End Sub
 
 End Class
