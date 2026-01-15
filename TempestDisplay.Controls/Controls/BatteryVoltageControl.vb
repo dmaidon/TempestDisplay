@@ -10,7 +10,8 @@ Public Class BatteryVoltageControl
 
     ' Data
     Private _voltage As Single = 2.6F
-    Private _minVoltage As Single = 2.0F
+
+    Private _minVoltage As Single = 2.255F
     Private _maxVoltage As Single = 2.8F
 
     Public Sub New()
@@ -37,7 +38,7 @@ Public Class BatteryVoltageControl
 
     <Browsable(True)>
     <Category("Data")>
-    <DefaultValue(2.0F)>
+    <DefaultValue(2.255F)>
     Public Property MinVoltage As Single
         Get
             Return _minVoltage
@@ -161,8 +162,8 @@ Public Class BatteryVoltageControl
             End Using
         End If
 
-        ' Draw voltage scale markings
-        Dim markings() As Single = {2.0F, 2.2F, 2.4F, 2.6F, 2.8F}
+        ' Draw voltage scale markings - Mode thresholds
+        Dim markings() As Single = {2.355F, 2.375F, 2.41F, 2.455F, 2.6F, 2.8F}
         Using tickBrush As New SolidBrush(Color.FromArgb(100, 100, 100)),
               tickPen As New Pen(Color.FromArgb(140, 140, 140), 1.0F)
 
@@ -177,7 +178,7 @@ Public Class BatteryVoltageControl
 
                     ' Label on left
                     Dim sf As New StringFormat() With {.Alignment = StringAlignment.Far, .LineAlignment = StringAlignment.Center}
-                    g.DrawString(mark.ToString("0.0"), smallFont, tickBrush, rect.Left - 5, markY, sf)
+                    g.DrawString(mark.ToString("0.00"), New Font(smallFont.FontFamily, smallFont.Size * 0.75F), tickBrush, rect.Left - 5, markY, sf)
                 End If
             Next
         End Using
@@ -194,43 +195,45 @@ Public Class BatteryVoltageControl
         End Using
     End Sub
 
-    Private Function GetVoltageColor(voltage As Single) As Color
-        ' Critical: < 2.4V (Red)
-        ' Low: 2.4 - 2.55V (Orange)
-        ' Power Save: 2.55 - 2.65V (Yellow)
-        ' Good: 2.65 - 2.75V (Light Green)
-        ' Excellent: >= 2.75V (Green)
+    Private Shared Function GetVoltageColor(voltage As Single) As Color
+        ' Mode 3 (Critical): < 2.355V (Dark Red)
+        ' Mode 2 (Further Reduced): 2.355 - 2.375V (Red)
+        ' Mode 1 (Reduced): 2.375 - 2.41V (Orange/Red)
+        ' Between Mode 1 and Mode 0: 2.41 - 2.455V (Orange/Yellow)
+        ' Mode 0 (Normal): >= 2.455V (Green)
 
-        If voltage < 2.4F Then
-            Return Color.FromArgb(220, 60, 60)  ' Red
-        ElseIf voltage < 2.55F Then
-            Return Color.FromArgb(255, 150, 50)  ' Orange
-        ElseIf voltage < 2.65F Then
-            Return Color.FromArgb(255, 200, 50)  ' Yellow
-        ElseIf voltage < 2.75F Then
-            Return Color.FromArgb(120, 200, 80)  ' Light Green
+        If voltage < 2.355F Then
+            Return Color.FromArgb(180, 0, 0)  ' Dark Red - Mode 3 Critical
+        ElseIf voltage < 2.375F Then
+            Return Color.FromArgb(220, 50, 50)  ' Red - Mode 2
+        ElseIf voltage < 2.41F Then
+            Return Color.FromArgb(255, 120, 0)  ' Orange-Red - Mode 1
+        ElseIf voltage < 2.455F Then
+            Return Color.FromArgb(255, 180, 0)  ' Orange-Yellow - Transitioning to Mode 0
         Else
-            Return Color.FromArgb(50, 180, 50)  ' Green
+            Return Color.FromArgb(50, 180, 50)  ' Green - Mode 0 Normal
         End If
     End Function
 
-    Private Function GetStatusText(voltage As Single) As String
-        If voltage < 2.4F Then
-            Return "Critical"
-        ElseIf voltage < 2.55F Then
-            Return "Low"
-        ElseIf voltage < 2.65F Then
-            Return "Power Save"
-        ElseIf voltage < 2.75F Then
-            Return "Good"
+    Private Shared Function GetStatusText(voltage As Single) As String
+        If voltage < 2.355F Then
+            Return "Mode 3 - Critical"
+        ElseIf voltage < 2.375F Then
+            Return "Mode 2 - Reduced"
+        ElseIf voltage < 2.41F Then
+            Return "Mode 1 - Reduced"
+        ElseIf voltage < 2.455F Then
+            Return "Entering Mode 0"
         Else
-            Return "Excellent"
+            Return "Mode 0 - Normal"
         End If
     End Function
+
 End Class
 
 ' Helper module for rounded rectangles
 Module GraphicsPathBatteryExtensions
+
     <System.Runtime.CompilerServices.Extension>
     Public Sub AddRoundedRectangle(path As GraphicsPath, rect As Rectangle, radius As Integer)
         Dim r As Integer = Math.Max(1, radius)
@@ -242,4 +245,5 @@ Module GraphicsPathBatteryExtensions
         path.AddArc(rect.Left, rect.Bottom - d, d, d, 90, 90)
         path.CloseFigure()
     End Sub
+
 End Module

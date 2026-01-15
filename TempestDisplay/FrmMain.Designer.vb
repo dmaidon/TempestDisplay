@@ -1,4 +1,4 @@
-﻿Imports TempestDisplay.Controls
+Imports TempestDisplay.Controls
 
 <Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()>
 Partial Class FrmMain
@@ -27,17 +27,17 @@ Partial Class FrmMain
         components = New ComponentModel.Container()
         Dim DataGridViewCellStyle1 As DataGridViewCellStyle = New DataGridViewCellStyle()
         Dim DataGridViewCellStyle2 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle3 As DataGridViewCellStyle = New DataGridViewCellStyle()
         Dim DataGridViewCellStyle4 As DataGridViewCellStyle = New DataGridViewCellStyle()
         Dim DataGridViewCellStyle5 As DataGridViewCellStyle = New DataGridViewCellStyle()
-        Dim DataGridViewCellStyle3 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle6 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle8 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle9 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle7 As DataGridViewCellStyle = New DataGridViewCellStyle()
         Dim ChartArea1 As System.Windows.Forms.DataVisualization.Charting.ChartArea = New DataVisualization.Charting.ChartArea()
         Dim Legend1 As System.Windows.Forms.DataVisualization.Charting.Legend = New DataVisualization.Charting.Legend()
         Dim Series1 As System.Windows.Forms.DataVisualization.Charting.Series = New DataVisualization.Charting.Series()
         Dim Title1 As System.Windows.Forms.DataVisualization.Charting.Title = New DataVisualization.Charting.Title()
-        Dim DataGridViewCellStyle6 As DataGridViewCellStyle = New DataGridViewCellStyle()
-        Dim DataGridViewCellStyle7 As DataGridViewCellStyle = New DataGridViewCellStyle()
-        Dim DataGridViewCellStyle8 As DataGridViewCellStyle = New DataGridViewCellStyle()
-        Dim DataGridViewCellStyle9 As DataGridViewCellStyle = New DataGridViewCellStyle()
         Dim resources As System.ComponentModel.ComponentResourceManager = New System.ComponentModel.ComponentResourceManager(GetType(FrmMain))
         SsBottom = New StatusStrip()
         TsslVer = New ToolStripStatusLabel()
@@ -59,6 +59,7 @@ Partial Class FrmMain
         LblCurWinds = New Label()
         TpExtraData = New TabPage()
         TlpExtraData = New TableLayoutPanel()
+        DgvObsSt = New DataGridView()
         TlpPrecipLight = New TableLayoutPanel()
         Label13 = New Label()
         Label14 = New Label()
@@ -93,11 +94,14 @@ Partial Class FrmMain
         LblWindGust = New Label()
         LblAvgWindSpd = New Label()
         LblWindSpd = New Label()
+        DgvHubStatus = New DataGridView()
         TpRecords = New TabPage()
         DgvRecords = New DataGridView()
         rRain = New DataGridViewTextBoxColumn()
         tTemp = New DataGridViewTextBoxColumn()
         wWind = New DataGridViewTextBoxColumn()
+        TpCharts = New TabPage()
+        ChtBattery = New DataVisualization.Charting.Chart()
         TpLogs = New TabPage()
         TcLogs = New TabControl()
         TpLogFiles = New TabPage()
@@ -109,12 +113,16 @@ Partial Class FrmMain
         PnlLogs = New Panel()
         Label24 = New Label()
         RtbLogs = New RichTextBox()
-        TpCharts = New TabPage()
-        PnlBatteryChart = New Panel()
-        ChtBattery = New DataVisualization.Charting.Chart()
-        TpGrids = New TabPage()
-        DgvObsSt = New DataGridView()
-        DgvHubStatus = New DataGridView()
+        TpSpares = New TabPage()
+        TpHelp = New TabPage()
+        PnlHelp = New Panel()
+        BtnHelpExport = New Button()
+        BtnHelpPrint = New Button()
+        TxtHelpSearch = New TextBox()
+        Label25 = New Label()
+        ScHelp = New SplitContainer()
+        TvHelp = New TreeView()
+        RtbHelp = New RichTextBox()
         TpSettings = New TabPage()
         PnlSettings = New Panel()
         GbStationData = New GroupBox()
@@ -170,22 +178,26 @@ Partial Class FrmMain
         TlpTemp.SuspendLayout()
         TpExtraData.SuspendLayout()
         TlpExtraData.SuspendLayout()
+        CType(DgvObsSt, ComponentModel.ISupportInitialize).BeginInit()
         TlpPrecipLight.SuspendLayout()
         TableLayoutPanel1.SuspendLayout()
         TlpWindSun.SuspendLayout()
+        CType(DgvHubStatus, ComponentModel.ISupportInitialize).BeginInit()
         TpRecords.SuspendLayout()
         CType(DgvRecords, ComponentModel.ISupportInitialize).BeginInit()
+        TpCharts.SuspendLayout()
+        CType(ChtBattery, ComponentModel.ISupportInitialize).BeginInit()
         TpLogs.SuspendLayout()
         TcLogs.SuspendLayout()
         TpLogFiles.SuspendLayout()
         Panel2.SuspendLayout()
         PnlLogs.SuspendLayout()
-        TpCharts.SuspendLayout()
-        PnlBatteryChart.SuspendLayout()
-        CType(ChtBattery, ComponentModel.ISupportInitialize).BeginInit()
-        TpGrids.SuspendLayout()
-        CType(DgvObsSt, ComponentModel.ISupportInitialize).BeginInit()
-        CType(DgvHubStatus, ComponentModel.ISupportInitialize).BeginInit()
+        TpHelp.SuspendLayout()
+        PnlHelp.SuspendLayout()
+        CType(ScHelp, ComponentModel.ISupportInitialize).BeginInit()
+        ScHelp.Panel1.SuspendLayout()
+        ScHelp.Panel2.SuspendLayout()
+        ScHelp.SuspendLayout()
         TpSettings.SuspendLayout()
         PnlSettings.SuspendLayout()
         GbStationData.SuspendLayout()
@@ -224,7 +236,7 @@ Partial Class FrmMain
         ' 
         ' TsslMidnightCountdown
         ' 
-        TsslMidnightCountdown.Font = New Font("Segoe UI", 8.0F, FontStyle.Bold Or FontStyle.Italic, GraphicsUnit.Point, CByte(0))
+        TsslMidnightCountdown.Font = New Font("Segoe UI", 8F, FontStyle.Bold Or FontStyle.Italic, GraphicsUnit.Point, CByte(0))
         TsslMidnightCountdown.ForeColor = Color.ForestGreen
         TsslMidnightCountdown.Name = "TsslMidnightCountdown"
         TsslMidnightCountdown.Size = New Size(35, 25)
@@ -232,7 +244,7 @@ Partial Class FrmMain
         ' 
         ' TsslCpy
         ' 
-        TsslCpy.Font = New Font("Segoe UI", 7.0F, FontStyle.Italic)
+        TsslCpy.Font = New Font("Segoe UI", 7F, FontStyle.Italic)
         TsslCpy.ForeColor = Color.Brown
         TsslCpy.Name = "TsslCpy"
         TsslCpy.Size = New Size(1474, 25)
@@ -259,7 +271,7 @@ Partial Class FrmMain
         ' 
         ' TsslTimesrun
         ' 
-        TsslTimesrun.Font = New Font("Segoe UI", 8.0F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
+        TsslTimesrun.Font = New Font("Segoe UI", 8F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
         TsslTimesrun.ForeColor = Color.FromArgb(CByte(192), CByte(0), CByte(0))
         TsslTimesrun.Name = "TsslTimesrun"
         TsslTimesrun.Size = New Size(22, 25)
@@ -269,24 +281,27 @@ Partial Class FrmMain
         ' TsslMessages
         ' 
         TsslMessages.Name = "TsslMessages"
-        TsslMessages.Size = New Size(1504, 25)
+        TsslMessages.Size = New Size(1458, 25)
         TsslMessages.Spring = True
         TsslMessages.Text = "-"
         ' 
         ' TsslErrCount
         ' 
-        TsslErrCount.Font = New Font("Segoe UI", 9.0F, FontStyle.Bold)
+        TsslErrCount.Font = New Font("Segoe UI", 9F, FontStyle.Bold)
         TsslErrCount.ForeColor = Color.ForestGreen
         TsslErrCount.Name = "TsslErrCount"
         TsslErrCount.Size = New Size(22, 25)
         TsslErrCount.Text = "0"
+        TsslErrCount.ToolTipText = "# Errors in App"
         ' 
         ' Tc
         ' 
         Tc.Controls.Add(TpData)
         Tc.Controls.Add(TpExtraData)
         Tc.Controls.Add(TpRecords)
+        Tc.Controls.Add(TpCharts)
         Tc.Controls.Add(TpLogs)
+        Tc.Controls.Add(TpHelp)
         Tc.Controls.Add(TpSettings)
         Tc.Dock = DockStyle.Top
         Tc.Location = New Point(0, 0)
@@ -347,8 +362,8 @@ Partial Class FrmMain
         TlpTemp.BackColor = Color.Gainsboro
         TlpTemp.ColumnCount = 2
         TlpData.SetColumnSpan(TlpTemp, 2)
-        TlpTemp.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 50.0F))
-        TlpTemp.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 50.0F))
+        TlpTemp.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 50F))
+        TlpTemp.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 50F))
         TlpTemp.Controls.Add(Label26, 0, 0)
         TlpTemp.Controls.Add(LblCurTemp, 0, 1)
         TlpTemp.Controls.Add(Label27, 0, 2)
@@ -369,7 +384,7 @@ Partial Class FrmMain
         Label26.AutoSize = True
         TlpTemp.SetColumnSpan(Label26, 2)
         Label26.Dock = DockStyle.Fill
-        Label26.Font = New Font("Segoe UI", 16.0F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
+        Label26.Font = New Font("Segoe UI", 16F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
         Label26.Location = New Point(3, 0)
         Label26.Name = "Label26"
         Label26.Size = New Size(369, 58)
@@ -382,7 +397,7 @@ Partial Class FrmMain
         LblCurTemp.AutoSize = True
         TlpTemp.SetColumnSpan(LblCurTemp, 2)
         LblCurTemp.Dock = DockStyle.Fill
-        LblCurTemp.Font = New Font("Segoe UI Black", 24.0F, FontStyle.Bold Or FontStyle.Italic, GraphicsUnit.Point, CByte(0))
+        LblCurTemp.Font = New Font("Segoe UI Black", 24F, FontStyle.Bold Or FontStyle.Italic, GraphicsUnit.Point, CByte(0))
         LblCurTemp.ForeColor = Color.Firebrick
         LblCurTemp.Location = New Point(3, 58)
         LblCurTemp.Name = "LblCurTemp"
@@ -397,7 +412,7 @@ Partial Class FrmMain
         Label27.AutoSize = True
         TlpTemp.SetColumnSpan(Label27, 2)
         Label27.Dock = DockStyle.Fill
-        Label27.Font = New Font("Segoe UI", 16.0F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
+        Label27.Font = New Font("Segoe UI", 16F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
         Label27.Location = New Point(3, 152)
         Label27.Name = "Label27"
         Label27.Size = New Size(369, 55)
@@ -410,7 +425,7 @@ Partial Class FrmMain
         LblCurWinds.AutoSize = True
         TlpTemp.SetColumnSpan(LblCurWinds, 2)
         LblCurWinds.Dock = DockStyle.Fill
-        LblCurWinds.Font = New Font("Segoe UI", 18.0F, FontStyle.Bold Or FontStyle.Italic, GraphicsUnit.Point, CByte(0))
+        LblCurWinds.Font = New Font("Segoe UI", 18F, FontStyle.Bold Or FontStyle.Italic, GraphicsUnit.Point, CByte(0))
         LblCurWinds.ForeColor = Color.Purple
         LblCurWinds.Location = New Point(3, 207)
         LblCurWinds.Name = "LblCurWinds"
@@ -441,9 +456,11 @@ Partial Class FrmMain
         TlpExtraData.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 12.5F))
         TlpExtraData.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 12.5F))
         TlpExtraData.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 12.5F))
+        TlpExtraData.Controls.Add(DgvObsSt, 2, 0)
         TlpExtraData.Controls.Add(TlpPrecipLight, 0, 0)
         TlpExtraData.Controls.Add(TableLayoutPanel1, 0, 2)
         TlpExtraData.Controls.Add(TlpWindSun, 0, 1)
+        TlpExtraData.Controls.Add(DgvHubStatus, 4, 0)
         TlpExtraData.Dock = DockStyle.Fill
         TlpExtraData.Location = New Point(0, 0)
         TlpExtraData.Name = "TlpExtraData"
@@ -454,13 +471,41 @@ Partial Class FrmMain
         TlpExtraData.Size = New Size(1551, 942)
         TlpExtraData.TabIndex = 14
         ' 
+        ' DgvObsSt
+        ' 
+        DgvObsSt.AllowUserToAddRows = False
+        DgvObsSt.AllowUserToDeleteRows = False
+        DgvObsSt.AllowUserToResizeRows = False
+        DataGridViewCellStyle1.BackColor = Color.Honeydew
+        DgvObsSt.AlternatingRowsDefaultCellStyle = DataGridViewCellStyle1
+        DgvObsSt.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
+        DataGridViewCellStyle2.Alignment = DataGridViewContentAlignment.MiddleCenter
+        DataGridViewCellStyle2.BackColor = Color.PaleTurquoise
+        DataGridViewCellStyle2.Font = New Font("Segoe UI", 8F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        DataGridViewCellStyle2.ForeColor = SystemColors.WindowText
+        DataGridViewCellStyle2.SelectionBackColor = SystemColors.Highlight
+        DataGridViewCellStyle2.SelectionForeColor = SystemColors.HighlightText
+        DataGridViewCellStyle2.WrapMode = DataGridViewTriState.True
+        DgvObsSt.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle2
+        DgvObsSt.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize
+        TlpExtraData.SetColumnSpan(DgvObsSt, 2)
+        DgvObsSt.Location = New Point(389, 3)
+        DgvObsSt.MultiSelect = False
+        DgvObsSt.Name = "DgvObsSt"
+        DgvObsSt.ReadOnly = True
+        DgvObsSt.RowHeadersVisible = False
+        DgvObsSt.RowHeadersWidth = 62
+        DgvObsSt.Size = New Size(378, 307)
+        DgvObsSt.TabIndex = 33
+        TTip.SetToolTip(DgvObsSt, "Observation Values (Obs_St)")
+        ' 
         ' TlpPrecipLight
         ' 
         TlpPrecipLight.CellBorderStyle = TableLayoutPanelCellBorderStyle.Single
         TlpPrecipLight.ColumnCount = 2
         TlpExtraData.SetColumnSpan(TlpPrecipLight, 2)
-        TlpPrecipLight.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 70.0F))
-        TlpPrecipLight.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 30.0F))
+        TlpPrecipLight.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 70F))
+        TlpPrecipLight.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 30F))
         TlpPrecipLight.Controls.Add(Label13, 0, 0)
         TlpPrecipLight.Controls.Add(Label14, 0, 1)
         TlpPrecipLight.Controls.Add(TxtRainTodayMinutes, 1, 1)
@@ -498,7 +543,7 @@ Partial Class FrmMain
         Label13.AutoSize = True
         Label13.BackColor = Color.FromArgb(CByte(192), CByte(255), CByte(255))
         TlpPrecipLight.SetColumnSpan(Label13, 2)
-        Label13.Font = New Font("Microsoft Sans Serif", 8.0F, FontStyle.Bold)
+        Label13.Font = New Font("Microsoft Sans Serif", 8F, FontStyle.Bold)
         Label13.Location = New Point(4, 1)
         Label13.Name = "Label13"
         Label13.Size = New Size(372, 32)
@@ -511,7 +556,7 @@ Partial Class FrmMain
         Label14.Anchor = AnchorStyles.Top Or AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
         Label14.AutoSize = True
         Label14.BackColor = Color.FromArgb(CByte(192), CByte(255), CByte(255))
-        Label14.Font = New Font("Microsoft Sans Serif", 8.0F, FontStyle.Bold)
+        Label14.Font = New Font("Microsoft Sans Serif", 8F, FontStyle.Bold)
         Label14.Location = New Point(4, 34)
         Label14.Name = "Label14"
         Label14.Size = New Size(257, 32)
@@ -522,7 +567,7 @@ Partial Class FrmMain
         ' TxtRainTodayMinutes
         ' 
         TxtRainTodayMinutes.Dock = DockStyle.Fill
-        TxtRainTodayMinutes.Font = New Font("Segoe UI", 8.0F, FontStyle.Bold)
+        TxtRainTodayMinutes.Font = New Font("Segoe UI", 8F, FontStyle.Bold)
         TxtRainTodayMinutes.Location = New Point(266, 35)
         TxtRainTodayMinutes.Margin = New Padding(1)
         TxtRainTodayMinutes.MaxLength = 15
@@ -536,7 +581,7 @@ Partial Class FrmMain
         ' TxtRainYesterdayMinutes
         ' 
         TxtRainYesterdayMinutes.Dock = DockStyle.Fill
-        TxtRainYesterdayMinutes.Font = New Font("Segoe UI", 8.0F, FontStyle.Bold)
+        TxtRainYesterdayMinutes.Font = New Font("Segoe UI", 8F, FontStyle.Bold)
         TxtRainYesterdayMinutes.Location = New Point(266, 68)
         TxtRainYesterdayMinutes.Margin = New Padding(1)
         TxtRainYesterdayMinutes.MaxLength = 15
@@ -552,7 +597,7 @@ Partial Class FrmMain
         Label15.Anchor = AnchorStyles.Top Or AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
         Label15.AutoSize = True
         Label15.BackColor = Color.FromArgb(CByte(192), CByte(255), CByte(255))
-        Label15.Font = New Font("Microsoft Sans Serif", 8.0F, FontStyle.Bold)
+        Label15.Font = New Font("Microsoft Sans Serif", 8F, FontStyle.Bold)
         Label15.Location = New Point(4, 67)
         Label15.Name = "Label15"
         Label15.Size = New Size(257, 32)
@@ -566,7 +611,7 @@ Partial Class FrmMain
         LblLightningDataTitle.BackColor = Color.LemonChiffon
         TlpPrecipLight.SetColumnSpan(LblLightningDataTitle, 2)
         LblLightningDataTitle.Dock = DockStyle.Fill
-        LblLightningDataTitle.Font = New Font("Microsoft Sans Serif", 8.0F, FontStyle.Bold)
+        LblLightningDataTitle.Font = New Font("Microsoft Sans Serif", 8F, FontStyle.Bold)
         LblLightningDataTitle.ImageAlign = ContentAlignment.MiddleLeft
         LblLightningDataTitle.Location = New Point(4, 100)
         LblLightningDataTitle.Name = "LblLightningDataTitle"
@@ -580,7 +625,7 @@ Partial Class FrmMain
         Label17.AutoSize = True
         Label17.BackColor = Color.LemonChiffon
         Label17.Dock = DockStyle.Fill
-        Label17.Font = New Font("Microsoft Sans Serif", 8.0F, FontStyle.Bold)
+        Label17.Font = New Font("Microsoft Sans Serif", 8F, FontStyle.Bold)
         Label17.Location = New Point(4, 133)
         Label17.Name = "Label17"
         Label17.Size = New Size(257, 32)
@@ -593,7 +638,7 @@ Partial Class FrmMain
         Label18.AutoSize = True
         Label18.BackColor = Color.LemonChiffon
         Label18.Dock = DockStyle.Fill
-        Label18.Font = New Font("Microsoft Sans Serif", 8.0F, FontStyle.Bold)
+        Label18.Font = New Font("Microsoft Sans Serif", 8F, FontStyle.Bold)
         Label18.Location = New Point(4, 166)
         Label18.Name = "Label18"
         Label18.Size = New Size(257, 32)
@@ -606,7 +651,7 @@ Partial Class FrmMain
         Label19.AutoSize = True
         Label19.BackColor = Color.LemonChiffon
         Label19.Dock = DockStyle.Fill
-        Label19.Font = New Font("Microsoft Sans Serif", 8.0F, FontStyle.Bold)
+        Label19.Font = New Font("Microsoft Sans Serif", 8F, FontStyle.Bold)
         Label19.Location = New Point(4, 199)
         Label19.Name = "Label19"
         Label19.Size = New Size(257, 32)
@@ -619,7 +664,7 @@ Partial Class FrmMain
         Label20.AutoSize = True
         Label20.BackColor = Color.LemonChiffon
         Label20.Dock = DockStyle.Fill
-        Label20.Font = New Font("Microsoft Sans Serif", 8.0F, FontStyle.Bold)
+        Label20.Font = New Font("Microsoft Sans Serif", 8F, FontStyle.Bold)
         Label20.Location = New Point(4, 232)
         Label20.Name = "Label20"
         Label20.Size = New Size(257, 32)
@@ -634,7 +679,7 @@ Partial Class FrmMain
         LblLightLastStrike.BackColor = Color.LemonChiffon
         TlpPrecipLight.SetColumnSpan(LblLightLastStrike, 2)
         LblLightLastStrike.Dock = DockStyle.Fill
-        LblLightLastStrike.Font = New Font("Microsoft Sans Serif", 8.0F, FontStyle.Bold)
+        LblLightLastStrike.Font = New Font("Microsoft Sans Serif", 8F, FontStyle.Bold)
         LblLightLastStrike.Location = New Point(4, 265)
         LblLightLastStrike.Name = "LblLightLastStrike"
         LblLightLastStrike.Size = New Size(372, 41)
@@ -646,7 +691,7 @@ Partial Class FrmMain
         ' TxtStrikeCount
         ' 
         TxtStrikeCount.Dock = DockStyle.Fill
-        TxtStrikeCount.Font = New Font("Segoe UI", 8.0F, FontStyle.Bold)
+        TxtStrikeCount.Font = New Font("Segoe UI", 8F, FontStyle.Bold)
         TxtStrikeCount.Location = New Point(266, 134)
         TxtStrikeCount.Margin = New Padding(1)
         TxtStrikeCount.MaxLength = 15
@@ -660,7 +705,7 @@ Partial Class FrmMain
         ' TxtLightHrCount
         ' 
         TxtLightHrCount.Dock = DockStyle.Fill
-        TxtLightHrCount.Font = New Font("Segoe UI", 8.0F, FontStyle.Bold)
+        TxtLightHrCount.Font = New Font("Segoe UI", 8F, FontStyle.Bold)
         TxtLightHrCount.Location = New Point(266, 167)
         TxtLightHrCount.Margin = New Padding(1)
         TxtLightHrCount.MaxLength = 15
@@ -674,7 +719,7 @@ Partial Class FrmMain
         ' TxtLight3hrCount
         ' 
         TxtLight3hrCount.Dock = DockStyle.Fill
-        TxtLight3hrCount.Font = New Font("Segoe UI", 8.0F, FontStyle.Bold)
+        TxtLight3hrCount.Font = New Font("Segoe UI", 8F, FontStyle.Bold)
         TxtLight3hrCount.Location = New Point(266, 200)
         TxtLight3hrCount.Margin = New Padding(1)
         TxtLight3hrCount.MaxLength = 15
@@ -688,7 +733,7 @@ Partial Class FrmMain
         ' TxtLightDistance
         ' 
         TxtLightDistance.Dock = DockStyle.Fill
-        TxtLightDistance.Font = New Font("Segoe UI", 8.0F, FontStyle.Bold)
+        TxtLightDistance.Font = New Font("Segoe UI", 8F, FontStyle.Bold)
         TxtLightDistance.Location = New Point(266, 233)
         TxtLightDistance.Margin = New Padding(1)
         TxtLightDistance.MaxLength = 15
@@ -704,8 +749,8 @@ Partial Class FrmMain
         TableLayoutPanel1.CellBorderStyle = TableLayoutPanelCellBorderStyle.Single
         TableLayoutPanel1.ColumnCount = 2
         TlpExtraData.SetColumnSpan(TableLayoutPanel1, 2)
-        TableLayoutPanel1.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 50.0F))
-        TableLayoutPanel1.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 50.0F))
+        TableLayoutPanel1.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 50F))
+        TableLayoutPanel1.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 50F))
         TableLayoutPanel1.Controls.Add(LblAirDensity, 0, 1)
         TableLayoutPanel1.Controls.Add(LblAirDensityCat, 0, 2)
         TableLayoutPanel1.Controls.Add(LblCloudBase, 0, 0)
@@ -716,16 +761,16 @@ Partial Class FrmMain
         TableLayoutPanel1.Location = New Point(3, 629)
         TableLayoutPanel1.Name = "TableLayoutPanel1"
         TableLayoutPanel1.RowCount = 10
-        TableLayoutPanel1.RowStyles.Add(New RowStyle(SizeType.Percent, 10.0F))
-        TableLayoutPanel1.RowStyles.Add(New RowStyle(SizeType.Percent, 10.0F))
-        TableLayoutPanel1.RowStyles.Add(New RowStyle(SizeType.Percent, 10.0F))
-        TableLayoutPanel1.RowStyles.Add(New RowStyle(SizeType.Percent, 10.0F))
-        TableLayoutPanel1.RowStyles.Add(New RowStyle(SizeType.Percent, 10.0F))
-        TableLayoutPanel1.RowStyles.Add(New RowStyle(SizeType.Percent, 10.0F))
-        TableLayoutPanel1.RowStyles.Add(New RowStyle(SizeType.Percent, 10.0F))
-        TableLayoutPanel1.RowStyles.Add(New RowStyle(SizeType.Percent, 10.0F))
-        TableLayoutPanel1.RowStyles.Add(New RowStyle(SizeType.Percent, 10.0F))
-        TableLayoutPanel1.RowStyles.Add(New RowStyle(SizeType.Percent, 10.0F))
+        TableLayoutPanel1.RowStyles.Add(New RowStyle(SizeType.Percent, 10F))
+        TableLayoutPanel1.RowStyles.Add(New RowStyle(SizeType.Percent, 10F))
+        TableLayoutPanel1.RowStyles.Add(New RowStyle(SizeType.Percent, 10F))
+        TableLayoutPanel1.RowStyles.Add(New RowStyle(SizeType.Percent, 10F))
+        TableLayoutPanel1.RowStyles.Add(New RowStyle(SizeType.Percent, 10F))
+        TableLayoutPanel1.RowStyles.Add(New RowStyle(SizeType.Percent, 10F))
+        TableLayoutPanel1.RowStyles.Add(New RowStyle(SizeType.Percent, 10F))
+        TableLayoutPanel1.RowStyles.Add(New RowStyle(SizeType.Percent, 10F))
+        TableLayoutPanel1.RowStyles.Add(New RowStyle(SizeType.Percent, 10F))
+        TableLayoutPanel1.RowStyles.Add(New RowStyle(SizeType.Percent, 10F))
         TableLayoutPanel1.Size = New Size(380, 310)
         TableLayoutPanel1.TabIndex = 13
         ' 
@@ -735,7 +780,7 @@ Partial Class FrmMain
         LblAirDensity.BackColor = Color.Aqua
         TableLayoutPanel1.SetColumnSpan(LblAirDensity, 2)
         LblAirDensity.Dock = DockStyle.Fill
-        LblAirDensity.Font = New Font("Microsoft Sans Serif", 8.0F, FontStyle.Bold)
+        LblAirDensity.Font = New Font("Microsoft Sans Serif", 8F, FontStyle.Bold)
         LblAirDensity.Location = New Point(4, 31)
         LblAirDensity.Name = "LblAirDensity"
         LblAirDensity.Size = New Size(372, 29)
@@ -750,7 +795,7 @@ Partial Class FrmMain
         LblAirDensityCat.BackColor = Color.Cyan
         TableLayoutPanel1.SetColumnSpan(LblAirDensityCat, 2)
         LblAirDensityCat.Dock = DockStyle.Fill
-        LblAirDensityCat.Font = New Font("Microsoft Sans Serif", 8.0F, FontStyle.Bold)
+        LblAirDensityCat.Font = New Font("Microsoft Sans Serif", 8F, FontStyle.Bold)
         LblAirDensityCat.Location = New Point(2, 62)
         LblAirDensityCat.Margin = New Padding(1)
         LblAirDensityCat.Name = "LblAirDensityCat"
@@ -766,7 +811,7 @@ Partial Class FrmMain
         LblCloudBase.BackColor = Color.Cyan
         TableLayoutPanel1.SetColumnSpan(LblCloudBase, 2)
         LblCloudBase.Dock = DockStyle.Fill
-        LblCloudBase.Font = New Font("Microsoft Sans Serif", 8.0F, FontStyle.Bold)
+        LblCloudBase.Font = New Font("Microsoft Sans Serif", 8F, FontStyle.Bold)
         LblCloudBase.Location = New Point(2, 2)
         LblCloudBase.Margin = New Padding(1)
         LblCloudBase.Name = "LblCloudBase"
@@ -806,7 +851,7 @@ Partial Class FrmMain
         LblBatteryStatus.BorderStyle = BorderStyle.Fixed3D
         TableLayoutPanel1.SetColumnSpan(LblBatteryStatus, 2)
         LblBatteryStatus.Dock = DockStyle.Fill
-        LblBatteryStatus.Font = New Font("Microsoft Sans Serif", 8.0F, FontStyle.Bold)
+        LblBatteryStatus.Font = New Font("Microsoft Sans Serif", 8F, FontStyle.Bold)
         LblBatteryStatus.Location = New Point(4, 181)
         LblBatteryStatus.Name = "LblBatteryStatus"
         LblBatteryStatus.Size = New Size(372, 29)
@@ -820,7 +865,7 @@ Partial Class FrmMain
         TlpWindSun.CellBorderStyle = TableLayoutPanelCellBorderStyle.Single
         TlpWindSun.ColumnCount = 1
         TlpExtraData.SetColumnSpan(TlpWindSun, 2)
-        TlpWindSun.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 100.0F))
+        TlpWindSun.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 100F))
         TlpWindSun.Controls.Add(LblPressTrend, 0, 9)
         TlpWindSun.Controls.Add(LblBaroPress, 0, 8)
         TlpWindSun.Controls.Add(LblBrightness, 0, 7)
@@ -835,16 +880,16 @@ Partial Class FrmMain
         TlpWindSun.Location = New Point(3, 316)
         TlpWindSun.Name = "TlpWindSun"
         TlpWindSun.RowCount = 10
-        TlpWindSun.RowStyles.Add(New RowStyle(SizeType.Percent, 10.0F))
-        TlpWindSun.RowStyles.Add(New RowStyle(SizeType.Percent, 10.0F))
-        TlpWindSun.RowStyles.Add(New RowStyle(SizeType.Percent, 10.0F))
-        TlpWindSun.RowStyles.Add(New RowStyle(SizeType.Percent, 10.0F))
-        TlpWindSun.RowStyles.Add(New RowStyle(SizeType.Percent, 10.0F))
-        TlpWindSun.RowStyles.Add(New RowStyle(SizeType.Percent, 10.0F))
-        TlpWindSun.RowStyles.Add(New RowStyle(SizeType.Percent, 10.0F))
-        TlpWindSun.RowStyles.Add(New RowStyle(SizeType.Percent, 10.0F))
-        TlpWindSun.RowStyles.Add(New RowStyle(SizeType.Percent, 10.0F))
-        TlpWindSun.RowStyles.Add(New RowStyle(SizeType.Percent, 10.0F))
+        TlpWindSun.RowStyles.Add(New RowStyle(SizeType.Percent, 10F))
+        TlpWindSun.RowStyles.Add(New RowStyle(SizeType.Percent, 10F))
+        TlpWindSun.RowStyles.Add(New RowStyle(SizeType.Percent, 10F))
+        TlpWindSun.RowStyles.Add(New RowStyle(SizeType.Percent, 10F))
+        TlpWindSun.RowStyles.Add(New RowStyle(SizeType.Percent, 10F))
+        TlpWindSun.RowStyles.Add(New RowStyle(SizeType.Percent, 10F))
+        TlpWindSun.RowStyles.Add(New RowStyle(SizeType.Percent, 10F))
+        TlpWindSun.RowStyles.Add(New RowStyle(SizeType.Percent, 10F))
+        TlpWindSun.RowStyles.Add(New RowStyle(SizeType.Percent, 10F))
+        TlpWindSun.RowStyles.Add(New RowStyle(SizeType.Percent, 10F))
         TlpWindSun.Size = New Size(380, 307)
         TlpWindSun.TabIndex = 7
         ' 
@@ -853,7 +898,7 @@ Partial Class FrmMain
         LblPressTrend.AutoSize = True
         LblPressTrend.BackColor = Color.FromArgb(CByte(192), CByte(192), CByte(255))
         LblPressTrend.Dock = DockStyle.Fill
-        LblPressTrend.Font = New Font("Microsoft Sans Serif", 8.0F, FontStyle.Bold)
+        LblPressTrend.Font = New Font("Microsoft Sans Serif", 8F, FontStyle.Bold)
         LblPressTrend.Location = New Point(4, 271)
         LblPressTrend.Name = "LblPressTrend"
         LblPressTrend.Size = New Size(372, 35)
@@ -867,7 +912,7 @@ Partial Class FrmMain
         LblBaroPress.AutoSize = True
         LblBaroPress.BackColor = Color.FromArgb(CByte(192), CByte(192), CByte(255))
         LblBaroPress.Dock = DockStyle.Fill
-        LblBaroPress.Font = New Font("Microsoft Sans Serif", 8.0F, FontStyle.Bold)
+        LblBaroPress.Font = New Font("Microsoft Sans Serif", 8F, FontStyle.Bold)
         LblBaroPress.Location = New Point(4, 241)
         LblBaroPress.Name = "LblBaroPress"
         LblBaroPress.Size = New Size(372, 29)
@@ -881,7 +926,7 @@ Partial Class FrmMain
         LblBrightness.AutoSize = True
         LblBrightness.BackColor = Color.Khaki
         LblBrightness.Dock = DockStyle.Fill
-        LblBrightness.Font = New Font("Microsoft Sans Serif", 8.0F, FontStyle.Bold)
+        LblBrightness.Font = New Font("Microsoft Sans Serif", 8F, FontStyle.Bold)
         LblBrightness.Location = New Point(4, 211)
         LblBrightness.Name = "LblBrightness"
         LblBrightness.Size = New Size(372, 29)
@@ -895,7 +940,7 @@ Partial Class FrmMain
         LblSolRad.AutoSize = True
         LblSolRad.BackColor = Color.Khaki
         LblSolRad.Dock = DockStyle.Fill
-        LblSolRad.Font = New Font("Microsoft Sans Serif", 8.0F, FontStyle.Bold)
+        LblSolRad.Font = New Font("Microsoft Sans Serif", 8F, FontStyle.Bold)
         LblSolRad.Location = New Point(4, 181)
         LblSolRad.Name = "LblSolRad"
         LblSolRad.Size = New Size(372, 29)
@@ -909,7 +954,7 @@ Partial Class FrmMain
         LblUV.AutoSize = True
         LblUV.BackColor = Color.Khaki
         LblUV.Dock = DockStyle.Fill
-        LblUV.Font = New Font("Microsoft Sans Serif", 8.0F, FontStyle.Bold)
+        LblUV.Font = New Font("Microsoft Sans Serif", 8F, FontStyle.Bold)
         LblUV.Location = New Point(4, 151)
         LblUV.Name = "LblUV"
         LblUV.Size = New Size(372, 29)
@@ -923,7 +968,7 @@ Partial Class FrmMain
         LblWindDir.AutoSize = True
         LblWindDir.BackColor = Color.FromArgb(CByte(192), CByte(255), CByte(192))
         LblWindDir.Dock = DockStyle.Fill
-        LblWindDir.Font = New Font("Microsoft Sans Serif", 8.0F, FontStyle.Bold)
+        LblWindDir.Font = New Font("Microsoft Sans Serif", 8F, FontStyle.Bold)
         LblWindDir.Location = New Point(4, 121)
         LblWindDir.Name = "LblWindDir"
         LblWindDir.Size = New Size(372, 29)
@@ -937,7 +982,7 @@ Partial Class FrmMain
         LblWindLull.AutoSize = True
         LblWindLull.BackColor = Color.FromArgb(CByte(192), CByte(255), CByte(192))
         LblWindLull.Dock = DockStyle.Fill
-        LblWindLull.Font = New Font("Microsoft Sans Serif", 8.0F, FontStyle.Bold)
+        LblWindLull.Font = New Font("Microsoft Sans Serif", 8F, FontStyle.Bold)
         LblWindLull.Location = New Point(4, 91)
         LblWindLull.Name = "LblWindLull"
         LblWindLull.Size = New Size(372, 29)
@@ -951,7 +996,7 @@ Partial Class FrmMain
         LblWindGust.AutoSize = True
         LblWindGust.BackColor = Color.FromArgb(CByte(192), CByte(255), CByte(192))
         LblWindGust.Dock = DockStyle.Fill
-        LblWindGust.Font = New Font("Microsoft Sans Serif", 8.0F, FontStyle.Bold)
+        LblWindGust.Font = New Font("Microsoft Sans Serif", 8F, FontStyle.Bold)
         LblWindGust.Location = New Point(4, 61)
         LblWindGust.Name = "LblWindGust"
         LblWindGust.Size = New Size(372, 29)
@@ -965,7 +1010,7 @@ Partial Class FrmMain
         LblAvgWindSpd.AutoSize = True
         LblAvgWindSpd.BackColor = Color.FromArgb(CByte(192), CByte(255), CByte(192))
         LblAvgWindSpd.Dock = DockStyle.Fill
-        LblAvgWindSpd.Font = New Font("Microsoft Sans Serif", 8.0F, FontStyle.Bold)
+        LblAvgWindSpd.Font = New Font("Microsoft Sans Serif", 8F, FontStyle.Bold)
         LblAvgWindSpd.Location = New Point(4, 31)
         LblAvgWindSpd.Name = "LblAvgWindSpd"
         LblAvgWindSpd.Size = New Size(372, 29)
@@ -979,7 +1024,7 @@ Partial Class FrmMain
         LblWindSpd.AutoSize = True
         LblWindSpd.BackColor = Color.FromArgb(CByte(192), CByte(255), CByte(192))
         LblWindSpd.Dock = DockStyle.Fill
-        LblWindSpd.Font = New Font("Microsoft Sans Serif", 8.0F, FontStyle.Bold)
+        LblWindSpd.Font = New Font("Microsoft Sans Serif", 8F, FontStyle.Bold)
         LblWindSpd.Location = New Point(4, 1)
         LblWindSpd.Name = "LblWindSpd"
         LblWindSpd.Size = New Size(372, 29)
@@ -987,6 +1032,33 @@ Partial Class FrmMain
         LblWindSpd.Tag = "Wind Speed: {0:F1}mph"
         LblWindSpd.Text = "Wind Speed"
         LblWindSpd.TextAlign = ContentAlignment.MiddleCenter
+        ' 
+        ' DgvHubStatus
+        ' 
+        DgvHubStatus.AllowUserToAddRows = False
+        DgvHubStatus.AllowUserToDeleteRows = False
+        DgvHubStatus.AllowUserToResizeRows = False
+        DataGridViewCellStyle3.BackColor = Color.LightCyan
+        DgvHubStatus.AlternatingRowsDefaultCellStyle = DataGridViewCellStyle3
+        DgvHubStatus.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
+        DataGridViewCellStyle4.Alignment = DataGridViewContentAlignment.MiddleCenter
+        DataGridViewCellStyle4.BackColor = SystemColors.ActiveCaption
+        DataGridViewCellStyle4.Font = New Font("Segoe UI", 8F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        DataGridViewCellStyle4.ForeColor = SystemColors.WindowText
+        DataGridViewCellStyle4.SelectionBackColor = SystemColors.Highlight
+        DataGridViewCellStyle4.SelectionForeColor = SystemColors.HighlightText
+        DataGridViewCellStyle4.WrapMode = DataGridViewTriState.True
+        DgvHubStatus.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle4
+        DgvHubStatus.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize
+        TlpExtraData.SetColumnSpan(DgvHubStatus, 2)
+        DgvHubStatus.Location = New Point(775, 3)
+        DgvHubStatus.MultiSelect = False
+        DgvHubStatus.Name = "DgvHubStatus"
+        DgvHubStatus.ReadOnly = True
+        DgvHubStatus.RowHeadersVisible = False
+        DgvHubStatus.RowHeadersWidth = 62
+        DgvHubStatus.Size = New Size(378, 306)
+        DgvHubStatus.TabIndex = 32
         ' 
         ' TpRecords
         ' 
@@ -1003,41 +1075,41 @@ Partial Class FrmMain
         ' 
         DgvRecords.AllowUserToAddRows = False
         DgvRecords.AllowUserToDeleteRows = False
-        DataGridViewCellStyle1.BackColor = Color.FromArgb(CByte(192), CByte(255), CByte(192))
-        DgvRecords.AlternatingRowsDefaultCellStyle = DataGridViewCellStyle1
+        DataGridViewCellStyle5.BackColor = Color.FromArgb(CByte(192), CByte(255), CByte(192))
+        DgvRecords.AlternatingRowsDefaultCellStyle = DataGridViewCellStyle5
         DgvRecords.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
         DgvRecords.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells
-        DataGridViewCellStyle2.Alignment = DataGridViewContentAlignment.MiddleCenter
-        DataGridViewCellStyle2.BackColor = SystemColors.Control
-        DataGridViewCellStyle2.Font = New Font("Segoe UI", 8.0F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
-        DataGridViewCellStyle2.ForeColor = SystemColors.WindowText
-        DataGridViewCellStyle2.SelectionBackColor = SystemColors.Highlight
-        DataGridViewCellStyle2.SelectionForeColor = SystemColors.HighlightText
-        DataGridViewCellStyle2.WrapMode = DataGridViewTriState.True
-        DgvRecords.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle2
+        DataGridViewCellStyle6.Alignment = DataGridViewContentAlignment.MiddleCenter
+        DataGridViewCellStyle6.BackColor = SystemColors.Control
+        DataGridViewCellStyle6.Font = New Font("Segoe UI", 8F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        DataGridViewCellStyle6.ForeColor = SystemColors.WindowText
+        DataGridViewCellStyle6.SelectionBackColor = SystemColors.Highlight
+        DataGridViewCellStyle6.SelectionForeColor = SystemColors.HighlightText
+        DataGridViewCellStyle6.WrapMode = DataGridViewTriState.True
+        DgvRecords.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle6
         DgvRecords.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize
         DgvRecords.Columns.AddRange(New DataGridViewColumn() {rRain, tTemp, wWind})
-        DataGridViewCellStyle4.Alignment = DataGridViewContentAlignment.MiddleLeft
-        DataGridViewCellStyle4.BackColor = SystemColors.Window
-        DataGridViewCellStyle4.Font = New Font("Segoe UI", 8.0F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
-        DataGridViewCellStyle4.ForeColor = SystemColors.ControlText
-        DataGridViewCellStyle4.SelectionBackColor = SystemColors.Highlight
-        DataGridViewCellStyle4.SelectionForeColor = SystemColors.HighlightText
-        DataGridViewCellStyle4.WrapMode = DataGridViewTriState.True
-        DgvRecords.DefaultCellStyle = DataGridViewCellStyle4
+        DataGridViewCellStyle8.Alignment = DataGridViewContentAlignment.MiddleLeft
+        DataGridViewCellStyle8.BackColor = SystemColors.Window
+        DataGridViewCellStyle8.Font = New Font("Segoe UI", 8F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        DataGridViewCellStyle8.ForeColor = SystemColors.ControlText
+        DataGridViewCellStyle8.SelectionBackColor = SystemColors.Highlight
+        DataGridViewCellStyle8.SelectionForeColor = SystemColors.HighlightText
+        DataGridViewCellStyle8.WrapMode = DataGridViewTriState.True
+        DgvRecords.DefaultCellStyle = DataGridViewCellStyle8
         DgvRecords.Dock = DockStyle.Left
         DgvRecords.Location = New Point(0, 0)
         DgvRecords.MultiSelect = False
         DgvRecords.Name = "DgvRecords"
         DgvRecords.ReadOnly = True
-        DataGridViewCellStyle5.Alignment = DataGridViewContentAlignment.MiddleCenter
-        DataGridViewCellStyle5.BackColor = SystemColors.Control
-        DataGridViewCellStyle5.Font = New Font("Segoe UI", 8.0F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
-        DataGridViewCellStyle5.ForeColor = SystemColors.WindowText
-        DataGridViewCellStyle5.SelectionBackColor = SystemColors.Highlight
-        DataGridViewCellStyle5.SelectionForeColor = SystemColors.HighlightText
-        DataGridViewCellStyle5.WrapMode = DataGridViewTriState.False
-        DgvRecords.RowHeadersDefaultCellStyle = DataGridViewCellStyle5
+        DataGridViewCellStyle9.Alignment = DataGridViewContentAlignment.MiddleCenter
+        DataGridViewCellStyle9.BackColor = SystemColors.Control
+        DataGridViewCellStyle9.Font = New Font("Segoe UI", 8F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        DataGridViewCellStyle9.ForeColor = SystemColors.WindowText
+        DataGridViewCellStyle9.SelectionBackColor = SystemColors.Highlight
+        DataGridViewCellStyle9.SelectionForeColor = SystemColors.HighlightText
+        DataGridViewCellStyle9.WrapMode = DataGridViewTriState.False
+        DgvRecords.RowHeadersDefaultCellStyle = DataGridViewCellStyle9
         DgvRecords.RowHeadersWidth = 350
         DgvRecords.RowTemplate.Height = 50
         DgvRecords.RowTemplate.ReadOnly = True
@@ -1061,21 +1133,54 @@ Partial Class FrmMain
         ' 
         ' wWind
         ' 
-        DataGridViewCellStyle3.Alignment = DataGridViewContentAlignment.MiddleCenter
-        DataGridViewCellStyle3.Font = New Font("Microsoft Sans Serif", 8.0F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
-        wWind.DefaultCellStyle = DataGridViewCellStyle3
+        DataGridViewCellStyle7.Alignment = DataGridViewContentAlignment.MiddleCenter
+        DataGridViewCellStyle7.Font = New Font("Microsoft Sans Serif", 8F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
+        wWind.DefaultCellStyle = DataGridViewCellStyle7
         wWind.HeaderText = "Wind"
         wWind.MinimumWidth = 8
         wWind.Name = "wWind"
         wWind.ReadOnly = True
         ' 
+        ' TpCharts
+        ' 
+        TpCharts.BorderStyle = BorderStyle.Fixed3D
+        TpCharts.Controls.Add(ChtBattery)
+        TpCharts.Location = New Point(4, 34)
+        TpCharts.Name = "TpCharts"
+        TpCharts.Size = New Size(1555, 946)
+        TpCharts.TabIndex = 6
+        TpCharts.Text = "Charts"
+        TpCharts.UseVisualStyleBackColor = True
+        ' 
+        ' ChtBattery
+        ' 
+        ChtBattery.BackColor = Color.PeachPuff
+        ChtBattery.BackGradientStyle = DataVisualization.Charting.GradientStyle.DiagonalLeft
+        ChartArea1.Name = "ChartArea1"
+        ChtBattery.ChartAreas.Add(ChartArea1)
+        Legend1.Name = "BatteryLegend"
+        ChtBattery.Legends.Add(Legend1)
+        ChtBattery.Location = New Point(8, 8)
+        ChtBattery.Name = "ChtBattery"
+        Series1.ChartArea = "ChartArea1"
+        Series1.Legend = "BatteryLegend"
+        Series1.Name = "Series1"
+        ChtBattery.Series.Add(Series1)
+        ChtBattery.Size = New Size(1529, 290)
+        ChtBattery.TabIndex = 11
+        ChtBattery.Text = "Tempest Battery Values"
+        Title1.Font = New Font("Arial Narrow", 10F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
+        Title1.Name = "title 1"
+        Title1.Text = "24-Hour Battery Voltage History"
+        ChtBattery.Titles.Add(Title1)
+        ' 
         ' TpLogs
         ' 
         TpLogs.BorderStyle = BorderStyle.Fixed3D
         TpLogs.Controls.Add(TcLogs)
-        TpLogs.Location = New Point(4, 30)
+        TpLogs.Location = New Point(4, 34)
         TpLogs.Name = "TpLogs"
-        TpLogs.Size = New Size(1555, 950)
+        TpLogs.Size = New Size(1555, 946)
         TpLogs.TabIndex = 3
         TpLogs.Text = "Logs"
         TpLogs.UseVisualStyleBackColor = True
@@ -1083,8 +1188,7 @@ Partial Class FrmMain
         ' TcLogs
         ' 
         TcLogs.Controls.Add(TpLogFiles)
-        TcLogs.Controls.Add(TpCharts)
-        TcLogs.Controls.Add(TpGrids)
+        TcLogs.Controls.Add(TpSpares)
         TcLogs.Dock = DockStyle.Top
         TcLogs.Location = New Point(0, 0)
         TcLogs.Name = "TcLogs"
@@ -1146,7 +1250,7 @@ Partial Class FrmMain
         ' 
         ' LbLogs
         ' 
-        LbLogs.Font = New Font("Segoe UI", 9.0F, FontStyle.Bold Or FontStyle.Italic, GraphicsUnit.Point, CByte(0))
+        LbLogs.Font = New Font("Segoe UI", 9F, FontStyle.Bold Or FontStyle.Italic, GraphicsUnit.Point, CByte(0))
         LbLogs.FormattingEnabled = True
         LbLogs.Location = New Point(220, 179)
         LbLogs.Name = "LbLogs"
@@ -1168,7 +1272,7 @@ Partial Class FrmMain
         ' Label24
         ' 
         Label24.AutoSize = True
-        Label24.Font = New Font("Segoe UI", 18.0F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
+        Label24.Font = New Font("Segoe UI", 18F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
         Label24.Location = New Point(302, 17)
         Label24.Name = "Label24"
         Label24.Size = New Size(150, 48)
@@ -1187,115 +1291,114 @@ Partial Class FrmMain
         RtbLogs.TabIndex = 0
         RtbLogs.Text = ""
         ' 
-        ' TpCharts
+        ' TpSpares
         ' 
-        TpCharts.BorderStyle = BorderStyle.Fixed3D
-        TpCharts.Controls.Add(PnlBatteryChart)
-        TpCharts.Location = New Point(4, 34)
-        TpCharts.Name = "TpCharts"
-        TpCharts.Padding = New Padding(3)
-        TpCharts.Size = New Size(1543, 905)
-        TpCharts.TabIndex = 1
-        TpCharts.Text = "Charts"
-        TpCharts.UseVisualStyleBackColor = True
+        TpSpares.BackColor = Color.AntiqueWhite
+        TpSpares.BorderStyle = BorderStyle.Fixed3D
+        TpSpares.Location = New Point(4, 34)
+        TpSpares.Name = "TpSpares"
+        TpSpares.Size = New Size(1543, 905)
+        TpSpares.TabIndex = 2
+        TpSpares.Text = "Spare"
         ' 
-        ' PnlBatteryChart
+        ' TpHelp
         ' 
-        PnlBatteryChart.BorderStyle = BorderStyle.Fixed3D
-        PnlBatteryChart.Controls.Add(ChtBattery)
-        PnlBatteryChart.Dock = DockStyle.Top
-        PnlBatteryChart.Location = New Point(3, 3)
-        PnlBatteryChart.Name = "PnlBatteryChart"
-        PnlBatteryChart.Size = New Size(1533, 364)
-        PnlBatteryChart.TabIndex = 11
+        TpHelp.BackColor = Color.Azure
+        TpHelp.BorderStyle = BorderStyle.Fixed3D
+        TpHelp.Controls.Add(PnlHelp)
+        TpHelp.Controls.Add(ScHelp)
+        TpHelp.Location = New Point(4, 34)
+        TpHelp.Name = "TpHelp"
+        TpHelp.Size = New Size(1555, 946)
+        TpHelp.TabIndex = 7
+        TpHelp.Text = "Help"
         ' 
-        ' ChtBattery
+        ' PnlHelp
         ' 
-        ChtBattery.BackColor = Color.PeachPuff
-        ChtBattery.BackGradientStyle = DataVisualization.Charting.GradientStyle.DiagonalLeft
-        ChartArea1.Name = "ChartArea1"
-        ChtBattery.ChartAreas.Add(ChartArea1)
-        ChtBattery.Dock = DockStyle.Fill
-        Legend1.Name = "BatteryLegend"
-        ChtBattery.Legends.Add(Legend1)
-        ChtBattery.Location = New Point(0, 0)
-        ChtBattery.Name = "ChtBattery"
-        Series1.ChartArea = "ChartArea1"
-        Series1.Legend = "BatteryLegend"
-        Series1.Name = "Series1"
-        ChtBattery.Series.Add(Series1)
-        ChtBattery.Size = New Size(1529, 360)
-        ChtBattery.TabIndex = 10
-        ChtBattery.Text = "Tempest Battery Values"
-        Title1.Font = New Font("Arial Narrow", 10.0F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
-        Title1.Name = "title 1"
-        Title1.Text = "24-Hour Battery Voltage History"
-        ChtBattery.Titles.Add(Title1)
+        PnlHelp.BackColor = Color.Turquoise
+        PnlHelp.BorderStyle = BorderStyle.Fixed3D
+        PnlHelp.Controls.Add(BtnHelpExport)
+        PnlHelp.Controls.Add(BtnHelpPrint)
+        PnlHelp.Controls.Add(TxtHelpSearch)
+        PnlHelp.Controls.Add(Label25)
+        PnlHelp.Dock = DockStyle.Top
+        PnlHelp.Location = New Point(0, 0)
+        PnlHelp.Name = "PnlHelp"
+        PnlHelp.Size = New Size(1551, 74)
+        PnlHelp.TabIndex = 1
         ' 
-        ' TpGrids
+        ' BtnHelpExport
         ' 
-        TpGrids.BackColor = Color.AntiqueWhite
-        TpGrids.BorderStyle = BorderStyle.Fixed3D
-        TpGrids.Controls.Add(DgvObsSt)
-        TpGrids.Controls.Add(DgvHubStatus)
-        TpGrids.Location = New Point(4, 34)
-        TpGrids.Name = "TpGrids"
-        TpGrids.Size = New Size(1543, 905)
-        TpGrids.TabIndex = 2
-        TpGrids.Text = "Grids"
+        BtnHelpExport.Location = New Point(1260, 18)
+        BtnHelpExport.Name = "BtnHelpExport"
+        BtnHelpExport.Size = New Size(112, 34)
+        BtnHelpExport.TabIndex = 3
+        BtnHelpExport.Text = "Export"
+        BtnHelpExport.UseVisualStyleBackColor = True
         ' 
-        ' DgvObsSt
+        ' BtnHelpPrint
         ' 
-        DgvObsSt.AllowUserToAddRows = False
-        DgvObsSt.AllowUserToDeleteRows = False
-        DgvObsSt.AllowUserToResizeRows = False
-        DataGridViewCellStyle6.BackColor = Color.Honeydew
-        DgvObsSt.AlternatingRowsDefaultCellStyle = DataGridViewCellStyle6
-        DgvObsSt.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
-        DataGridViewCellStyle7.Alignment = DataGridViewContentAlignment.MiddleCenter
-        DataGridViewCellStyle7.BackColor = Color.PaleTurquoise
-        DataGridViewCellStyle7.Font = New Font("Segoe UI", 8.0F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
-        DataGridViewCellStyle7.ForeColor = SystemColors.WindowText
-        DataGridViewCellStyle7.SelectionBackColor = SystemColors.Highlight
-        DataGridViewCellStyle7.SelectionForeColor = SystemColors.HighlightText
-        DataGridViewCellStyle7.WrapMode = DataGridViewTriState.True
-        DgvObsSt.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle7
-        DgvObsSt.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize
-        DgvObsSt.Location = New Point(13, 41)
-        DgvObsSt.MultiSelect = False
-        DgvObsSt.Name = "DgvObsSt"
-        DgvObsSt.ReadOnly = True
-        DgvObsSt.RowHeadersVisible = False
-        DgvObsSt.RowHeadersWidth = 62
-        DgvObsSt.Size = New Size(378, 307)
-        DgvObsSt.TabIndex = 29
-        TTip.SetToolTip(DgvObsSt, "Observation Values (Obs_St)")
+        BtnHelpPrint.Location = New Point(995, 18)
+        BtnHelpPrint.Name = "BtnHelpPrint"
+        BtnHelpPrint.Size = New Size(112, 34)
+        BtnHelpPrint.TabIndex = 2
+        BtnHelpPrint.Text = "Print"
+        BtnHelpPrint.UseVisualStyleBackColor = True
         ' 
-        ' DgvHubStatus
+        ' TxtHelpSearch
         ' 
-        DgvHubStatus.AllowUserToAddRows = False
-        DgvHubStatus.AllowUserToDeleteRows = False
-        DgvHubStatus.AllowUserToResizeRows = False
-        DataGridViewCellStyle8.BackColor = Color.LightCyan
-        DgvHubStatus.AlternatingRowsDefaultCellStyle = DataGridViewCellStyle8
-        DgvHubStatus.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
-        DataGridViewCellStyle9.Alignment = DataGridViewContentAlignment.MiddleCenter
-        DataGridViewCellStyle9.BackColor = SystemColors.ActiveCaption
-        DataGridViewCellStyle9.Font = New Font("Segoe UI", 8.0F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
-        DataGridViewCellStyle9.ForeColor = SystemColors.WindowText
-        DataGridViewCellStyle9.SelectionBackColor = SystemColors.Highlight
-        DataGridViewCellStyle9.SelectionForeColor = SystemColors.HighlightText
-        DataGridViewCellStyle9.WrapMode = DataGridViewTriState.True
-        DgvHubStatus.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle9
-        DgvHubStatus.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize
-        DgvHubStatus.Location = New Point(459, 42)
-        DgvHubStatus.MultiSelect = False
-        DgvHubStatus.Name = "DgvHubStatus"
-        DgvHubStatus.ReadOnly = True
-        DgvHubStatus.RowHeadersVisible = False
-        DgvHubStatus.RowHeadersWidth = 62
-        DgvHubStatus.Size = New Size(378, 306)
-        DgvHubStatus.TabIndex = 28
+        TxtHelpSearch.Location = New Point(279, 21)
+        TxtHelpSearch.Name = "TxtHelpSearch"
+        TxtHelpSearch.Size = New Size(593, 29)
+        TxtHelpSearch.TabIndex = 1
+        ' 
+        ' Label25
+        ' 
+        Label25.AutoSize = True
+        Label25.Font = New Font("Segoe UI", 8F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
+        Label25.Location = New Point(174, 25)
+        Label25.Name = "Label25"
+        Label25.Size = New Size(105, 21)
+        Label25.TabIndex = 0
+        Label25.Text = "Search Text: "
+        ' 
+        ' ScHelp
+        ' 
+        ScHelp.BackColor = Color.PaleTurquoise
+        ScHelp.BorderStyle = BorderStyle.Fixed3D
+        ScHelp.Dock = DockStyle.Bottom
+        ScHelp.Location = New Point(0, 76)
+        ScHelp.Name = "ScHelp"
+        ' 
+        ' ScHelp.Panel1
+        ' 
+        ScHelp.Panel1.Controls.Add(TvHelp)
+        ' 
+        ' ScHelp.Panel2
+        ' 
+        ScHelp.Panel2.Controls.Add(RtbHelp)
+        ScHelp.Size = New Size(1551, 866)
+        ScHelp.SplitterDistance = 400
+        ScHelp.TabIndex = 0
+        ' 
+        ' TvHelp
+        ' 
+        TvHelp.Font = New Font("Segoe UI", 9F)
+        TvHelp.Location = New Point(31, 116)
+        TvHelp.Name = "TvHelp"
+        TvHelp.Size = New Size(333, 631)
+        TvHelp.TabIndex = 0
+        ' 
+        ' RtbHelp
+        ' 
+        RtbHelp.Font = New Font("Segoe UI", 10F)
+        RtbHelp.Location = New Point(100, 72)
+        RtbHelp.Name = "RtbHelp"
+        RtbHelp.ReadOnly = True
+        RtbHelp.ShowSelectionMargin = True
+        RtbHelp.Size = New Size(943, 719)
+        RtbHelp.TabIndex = 0
+        RtbHelp.Text = ""
         ' 
         ' TpSettings
         ' 
@@ -1432,7 +1535,7 @@ Partial Class FrmMain
         ' Label12
         ' 
         Label12.AutoSize = True
-        Label12.Font = New Font("Segoe UI", 10.0F, FontStyle.Bold)
+        Label12.Font = New Font("Segoe UI", 10F, FontStyle.Bold)
         Label12.Location = New Point(217, 12)
         Label12.Name = "Label12"
         Label12.Size = New Size(246, 28)
@@ -1465,8 +1568,8 @@ Partial Class FrmMain
         ' TlpRainGaugeLimits
         ' 
         TlpRainGaugeLimits.ColumnCount = 2
-        TlpRainGaugeLimits.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 50.0F))
-        TlpRainGaugeLimits.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 50.0F))
+        TlpRainGaugeLimits.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 50F))
+        TlpRainGaugeLimits.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 50F))
         TlpRainGaugeLimits.Controls.Add(Label7, 0, 0)
         TlpRainGaugeLimits.Controls.Add(Label8, 0, 1)
         TlpRainGaugeLimits.Controls.Add(Label9, 0, 2)
@@ -1480,11 +1583,11 @@ Partial Class FrmMain
         TlpRainGaugeLimits.Location = New Point(11, 23)
         TlpRainGaugeLimits.Name = "TlpRainGaugeLimits"
         TlpRainGaugeLimits.RowCount = 5
-        TlpRainGaugeLimits.RowStyles.Add(New RowStyle(SizeType.Percent, 20.0F))
-        TlpRainGaugeLimits.RowStyles.Add(New RowStyle(SizeType.Percent, 20.0F))
-        TlpRainGaugeLimits.RowStyles.Add(New RowStyle(SizeType.Percent, 20.0F))
-        TlpRainGaugeLimits.RowStyles.Add(New RowStyle(SizeType.Percent, 20.0F))
-        TlpRainGaugeLimits.RowStyles.Add(New RowStyle(SizeType.Percent, 20.0F))
+        TlpRainGaugeLimits.RowStyles.Add(New RowStyle(SizeType.Percent, 20F))
+        TlpRainGaugeLimits.RowStyles.Add(New RowStyle(SizeType.Percent, 20F))
+        TlpRainGaugeLimits.RowStyles.Add(New RowStyle(SizeType.Percent, 20F))
+        TlpRainGaugeLimits.RowStyles.Add(New RowStyle(SizeType.Percent, 20F))
+        TlpRainGaugeLimits.RowStyles.Add(New RowStyle(SizeType.Percent, 20F))
         TlpRainGaugeLimits.Size = New Size(215, 195)
         TlpRainGaugeLimits.TabIndex = 0
         ' 
@@ -1492,7 +1595,7 @@ Partial Class FrmMain
         ' 
         Label7.Anchor = AnchorStyles.Top Or AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
         Label7.AutoSize = True
-        Label7.Font = New Font("Segoe UI", 9.0F, FontStyle.Bold)
+        Label7.Font = New Font("Segoe UI", 9F, FontStyle.Bold)
         Label7.Location = New Point(2, 2)
         Label7.Margin = New Padding(2)
         Label7.Name = "Label7"
@@ -1505,7 +1608,7 @@ Partial Class FrmMain
         ' 
         Label8.Anchor = AnchorStyles.Top Or AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
         Label8.AutoSize = True
-        Label8.Font = New Font("Segoe UI", 9.0F, FontStyle.Bold)
+        Label8.Font = New Font("Segoe UI", 9F, FontStyle.Bold)
         Label8.Location = New Point(2, 41)
         Label8.Margin = New Padding(2)
         Label8.Name = "Label8"
@@ -1518,7 +1621,7 @@ Partial Class FrmMain
         ' 
         Label9.Anchor = AnchorStyles.Top Or AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
         Label9.AutoSize = True
-        Label9.Font = New Font("Segoe UI", 9.0F, FontStyle.Bold)
+        Label9.Font = New Font("Segoe UI", 9F, FontStyle.Bold)
         Label9.Location = New Point(2, 80)
         Label9.Margin = New Padding(2)
         Label9.Name = "Label9"
@@ -1531,7 +1634,7 @@ Partial Class FrmMain
         ' 
         Label10.Anchor = AnchorStyles.Top Or AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
         Label10.AutoSize = True
-        Label10.Font = New Font("Segoe UI", 9.0F, FontStyle.Bold)
+        Label10.Font = New Font("Segoe UI", 9F, FontStyle.Bold)
         Label10.Location = New Point(2, 119)
         Label10.Margin = New Padding(2)
         Label10.Name = "Label10"
@@ -1544,7 +1647,7 @@ Partial Class FrmMain
         ' 
         Label11.Anchor = AnchorStyles.Top Or AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
         Label11.AutoSize = True
-        Label11.Font = New Font("Segoe UI", 9.0F, FontStyle.Bold)
+        Label11.Font = New Font("Segoe UI", 9F, FontStyle.Bold)
         Label11.Location = New Point(2, 158)
         Label11.Margin = New Padding(2)
         Label11.Name = "Label11"
@@ -1763,14 +1866,14 @@ Partial Class FrmMain
         ' 
         ' ToolStripStatusLabel1
         ' 
-        ToolStripStatusLabel1.Font = New Font("Segoe UI", 9.0F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
+        ToolStripStatusLabel1.Font = New Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
         ToolStripStatusLabel1.Name = "ToolStripStatusLabel1"
         ToolStripStatusLabel1.Size = New Size(78, 25)
         ToolStripStatusLabel1.Text = "Station:"
         ' 
         ' TsslObs_St
         ' 
-        TsslObs_St.Font = New Font("Segoe UI", 7.0F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        TsslObs_St.Font = New Font("Segoe UI", 7F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
         TsslObs_St.Name = "TsslObs_St"
         TsslObs_St.Size = New Size(1470, 25)
         TsslObs_St.Spring = True
@@ -1784,7 +1887,7 @@ Partial Class FrmMain
         ' 
         ' FrmMain
         ' 
-        AutoScaleDimensions = New SizeF(144.0F, 144.0F)
+        AutoScaleDimensions = New SizeF(144F, 144F)
         AutoScaleMode = AutoScaleMode.Dpi
         AutoSizeMode = AutoSizeMode.GrowAndShrink
         ClientSize = New Size(1563, 1088)
@@ -1793,7 +1896,7 @@ Partial Class FrmMain
         Controls.Add(SsTop)
         Controls.Add(SsBottom)
         DoubleBuffered = True
-        Font = New Font("Segoe UI", 8.0F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        Font = New Font("Segoe UI", 8F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
         Icon = CType(resources.GetObject("$this.Icon"), Icon)
         Name = "FrmMain"
         SizeGripStyle = SizeGripStyle.Show
@@ -1810,14 +1913,18 @@ Partial Class FrmMain
         TlpTemp.PerformLayout()
         TpExtraData.ResumeLayout(False)
         TlpExtraData.ResumeLayout(False)
+        CType(DgvObsSt, ComponentModel.ISupportInitialize).EndInit()
         TlpPrecipLight.ResumeLayout(False)
         TlpPrecipLight.PerformLayout()
         TableLayoutPanel1.ResumeLayout(False)
         TableLayoutPanel1.PerformLayout()
         TlpWindSun.ResumeLayout(False)
         TlpWindSun.PerformLayout()
+        CType(DgvHubStatus, ComponentModel.ISupportInitialize).EndInit()
         TpRecords.ResumeLayout(False)
         CType(DgvRecords, ComponentModel.ISupportInitialize).EndInit()
+        TpCharts.ResumeLayout(False)
+        CType(ChtBattery, ComponentModel.ISupportInitialize).EndInit()
         TpLogs.ResumeLayout(False)
         TcLogs.ResumeLayout(False)
         TpLogFiles.ResumeLayout(False)
@@ -1825,12 +1932,13 @@ Partial Class FrmMain
         Panel2.PerformLayout()
         PnlLogs.ResumeLayout(False)
         PnlLogs.PerformLayout()
-        TpCharts.ResumeLayout(False)
-        PnlBatteryChart.ResumeLayout(False)
-        CType(ChtBattery, ComponentModel.ISupportInitialize).EndInit()
-        TpGrids.ResumeLayout(False)
-        CType(DgvObsSt, ComponentModel.ISupportInitialize).EndInit()
-        CType(DgvHubStatus, ComponentModel.ISupportInitialize).EndInit()
+        TpHelp.ResumeLayout(False)
+        PnlHelp.ResumeLayout(False)
+        PnlHelp.PerformLayout()
+        ScHelp.Panel1.ResumeLayout(False)
+        ScHelp.Panel2.ResumeLayout(False)
+        CType(ScHelp, ComponentModel.ISupportInitialize).EndInit()
+        ScHelp.ResumeLayout(False)
         TpSettings.ResumeLayout(False)
         PnlSettings.ResumeLayout(False)
         GbStationData.ResumeLayout(False)
@@ -1937,9 +2045,6 @@ Partial Class FrmMain
     Friend WithEvents Label16 As Label
     Friend WithEvents TcLogs As TabControl
     Friend WithEvents TpLogFiles As TabPage
-    Friend WithEvents TpCharts As TabPage
-    Friend WithEvents ChtBattery As DataVisualization.Charting.Chart
-    Friend WithEvents PnlBatteryChart As Panel
     Friend WithEvents WrWindSpeed As WindRoseControl
     Friend WithEvents ThermCurrentTemp As TempThermometerControl
     Friend WithEvents ThermFeelsLike As TempThermometerControl
@@ -1952,16 +2057,18 @@ Partial Class FrmMain
     Friend WithEvents SolarMeter As SolarEnergyMeter
     Friend WithEvents StatusLeds As StatusLEDPanel
     Friend WithEvents TrendArrows As TrendArrowsControl
-    Friend WithEvents TpGrids As TabPage
+    Friend WithEvents TpCharts As TabPage
+    Friend WithEvents ChtBattery As DataVisualization.Charting.Chart
+    Friend WithEvents TpExtraData As TabPage
+    Friend WithEvents TlpExtraData As TableLayoutPanel
     Friend WithEvents DgvObsSt As DataGridView
     Friend WithEvents DgvHubStatus As DataGridView
-    Friend WithEvents TpExtraData As TabPage
     Friend WithEvents TlpPrecipLight As TableLayoutPanel
     Friend WithEvents Label13 As Label
     Friend WithEvents Label14 As Label
+    Friend WithEvents Label15 As Label
     Friend WithEvents TxtRainTodayMinutes As TextBox
     Friend WithEvents TxtRainYesterdayMinutes As TextBox
-    Friend WithEvents Label15 As Label
     Friend WithEvents LblLightningDataTitle As Label
     Friend WithEvents Label17 As Label
     Friend WithEvents Label18 As Label
@@ -1976,6 +2083,9 @@ Partial Class FrmMain
     Friend WithEvents LblAirDensity As Label
     Friend WithEvents LblAirDensityCat As Label
     Friend WithEvents LblCloudBase As Label
+    Friend WithEvents LblIP As Label
+    Friend WithEvents LblUpdate As Label
+    Friend WithEvents LblBatteryStatus As Label
     Friend WithEvents TlpWindSun As TableLayoutPanel
     Friend WithEvents LblPressTrend As Label
     Friend WithEvents LblBaroPress As Label
@@ -1987,15 +2097,21 @@ Partial Class FrmMain
     Friend WithEvents LblWindGust As Label
     Friend WithEvents LblAvgWindSpd As Label
     Friend WithEvents LblWindSpd As Label
-    Friend WithEvents TlpExtraData As TableLayoutPanel
-    Friend WithEvents LblIP As Label
-    Friend WithEvents LblUpdate As Label
-    Friend WithEvents LblBatteryStatus As Label
-    Friend WithEvents LbLogs As ListBox
+    Friend WithEvents TpHelp As TabPage
+    Friend WithEvents PnlHelp As Panel
+    Friend WithEvents BtnHelpExport As Button
+    Friend WithEvents BtnHelpPrint As Button
+    Friend WithEvents TxtHelpSearch As TextBox
+    Friend WithEvents Label25 As Label
+    Friend WithEvents ScHelp As SplitContainer
+    Friend WithEvents TvHelp As TreeView
+    Friend WithEvents RtbHelp As RichTextBox
     Friend WithEvents TsslErrCount As ToolStripStatusLabel
+    Friend WithEvents TpSpares As TabPage
     Friend WithEvents Panel2 As Panel
     Friend WithEvents BtnFindNext As Button
     Friend WithEvents BtnFind As Button
     Friend WithEvents TxtLogSearch As TextBox
+    Friend WithEvents LbLogs As ListBox
 
 End Class

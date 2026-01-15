@@ -1,11 +1,7 @@
 ﻿Imports System.IO
+Imports System.Net.Sockets
 Imports System.Text.Json
 
-''' <summary>
-''' FrmMain partial class for UDP listener integration
-''' Handles real-time weather data from WeatherFlow hub
-''' REFACTORED VERSION - Broken into smaller, focused methods
-''' </summary>
 Partial Public Class FrmMain
 
     ''DO NOT DELETE: https://weatherflow.github.io/Tempest/api/udp/v171/
@@ -25,6 +21,12 @@ Partial Public Class FrmMain
     Private ReadOnly _lightningStrikeFile As String = Path.Combine(DataDir, "LastLightningStrike.json")
 
     Private ReadOnly _lightningStrikeLock As New Object()
+
+    ' Message clearing timer tracking
+    Private _messageTimer As Timer
+
+    Private _currentMessageType As String = "" ' "rain" or "lightning"
+    Private _currentMessageTimestamp As DateTime = DateTime.MinValue
 
     ' NEW: Temperature/Humidity/Wind trend tracking (1 hour window)
     Private Structure ValueReading
@@ -51,6 +53,8 @@ Partial Public Class FrmMain
 
     Private Const HumidSteadyThresholdPct As Double = 1.0
     Private Const WindSteadyThresholdMph As Double = 1.0
+
+    Private Const KmToMilesFactor As Double = 0.621371
 
     ' Cached JsonSerializerOptions for performance
     Private Shared ReadOnly _jsonOptions As New JsonSerializerOptions With {
@@ -107,8 +111,41 @@ Partial Public Class FrmMain
             ' Start listening
             _udpListener.StartListening()
             Log.Write("UDP listener started successfully on port 50222")
+        Catch ex As InvalidOperationException When ex.Message.Contains("Port") AndAlso ex.Message.Contains("already in use")
+            ' Port already in use - likely another instance running
+            Log.Write("═══════════════════════════════════════════════════════════")
+            Log.Write("ERROR: Port 50222 is already in use!")
+            Log.Write("This usually means:")
+            Log.Write("  1. Another instance of TempestDisplay is already running")
+            Log.Write("  2. Another application is using port 50222")
+            Log.Write("Check Task Manager for multiple TempestDisplay.exe instances")
+            Log.Write("═══════════════════════════════════════════════════════════")
+            Log.WriteException(ex, "Port conflict - UDP listener NOT started")
+        Catch ex As SocketException
+            ' Detailed socket error logging
+            Log.Write("═══════════════════════════════════════════════════════════")
+            Log.Write($"ERROR: SocketException starting UDP listener")
+            Log.Write($"  ErrorCode: {ex.ErrorCode}")
+            Log.Write($"  SocketErrorCode: {ex.SocketErrorCode}")
+            Log.Write($"  NativeErrorCode: {ex.NativeErrorCode}")
+            Log.Write($"  Message: {ex.Message}")
+            Log.Write("Common causes:")
+            Select Case ex.SocketErrorCode
+                Case SocketError.AddressAlreadyInUse
+                    Log.Write("  - Port 50222 is already in use by another application")
+                Case SocketError.AccessDenied
+                    Log.Write("  - Firewall or permissions blocking port 50222")
+                Case SocketError.NetworkUnreachable, SocketError.NetworkDown
+                    Log.Write("  - No network adapter available")
+                Case Else
+                    Log.Write($"  - Unexpected socket error (see error code {ex.SocketErrorCode})")
+            End Select
+            Log.Write("═══════════════════════════════════════════════════════════")
+            Log.WriteException(ex, "SocketException - UDP listener NOT started, will use REST API fallback")
         Catch ex As Exception
-            Log.WriteException(ex, "Error starting UDP listener - will use REST API fallback")
+            Log.Write("═══════════════════════════════════════════════════════════")
+            Log.WriteException(ex, "Unexpected error starting UDP listener - will use REST API fallback")
+            Log.Write("═══════════════════════════════════════════════════════════")
         End Try
     End Sub
 
@@ -120,6 +157,13 @@ Partial Public Class FrmMain
                 _udpListener.Dispose()
                 _udpListener = Nothing
                 Log.Write("UDP listener stopped and disposed")
+            End If
+
+            ' Cleanup message timer
+            If _messageTimer IsNot Nothing Then
+                _messageTimer.Stop()
+                _messageTimer.Dispose()
+                _messageTimer = Nothing
             End If
 
             ' Save pressure history before shutdown
@@ -216,6 +260,9 @@ Partial Public Class FrmMain
                                           If TsslMessages IsNot Nothing Then
                                               TsslMessages.Text = message
                                           End If
+
+                                          ' Set up timer to clear message after 15 minutes from rain start time
+                                          SetupMessageClearTimer("rain", e.Timestamp, 15)
                                       Catch ex As Exception
                                           Log.WriteException(ex, "Error handling rain start event")
                                       End Try
@@ -234,7 +281,7 @@ Partial Public Class FrmMain
                                           Dim message = $"Lightning Strike at {e.Timestamp:yyyy-MM-dd HH:mm:ss}, Distance: {e.Distance}km, Energy: {e.Energy}"
                                           Log.Write($"[UDP EVENT] {message}")
 
-                                          Dim distanceMiles = e.Distance * 0.621371
+                                          Dim distanceMiles = e.Distance * KmToMilesFactor
 
                                           If LblLightLastStrike IsNot Nothing Then
                                               LblLightLastStrike.Text = $"Last Strike: {e.Timestamp:MMM d h:mm tt}"
@@ -247,6 +294,9 @@ Partial Public Class FrmMain
                                           If TsslMessages IsNot Nothing Then
                                               TsslMessages.Text = message
                                           End If
+
+                                          ' Set up timer to clear message after 30 minutes from lightning strike time
+                                          SetupMessageClearTimer("lightning", e.Timestamp, 30)
 
                                           Task.Run(Sub() SaveLightningStrike(e.Timestamp, e.Distance, e.Energy))
                                       Catch ex As Exception
@@ -384,7 +434,7 @@ Partial Public Class FrmMain
             Dim lastStrike = JsonSerializer.Deserialize(Of LightningStrikeData)(json)
 
             If lastStrike.Timestamp <> DateTime.MinValue Then
-                Dim distanceMiles = lastStrike.DistanceKm * 0.621371
+                Dim distanceMiles = lastStrike.DistanceKm * KmToMilesFactor
 
                 UIService.SafeInvoke(Me, Sub()
                                              If LblLightLastStrike IsNot Nothing Then
@@ -418,7 +468,7 @@ Partial Public Class FrmMain
                 Dim json = JsonSerializer.Serialize(strikeData, _jsonOptions)
                 File.WriteAllText(_lightningStrikeFile, json)
 
-                Dim distanceMiles = distanceKm * 0.621371
+                Dim distanceMiles = distanceKm * KmToMilesFactor
                 Log.Write($"[Lightning] Saved strike: {timestamp:yyyy-MM-dd HH:mm:ss}, {distanceMiles:F1} mi ({distanceKm:F1} km), Energy: {energy}")
             End SyncLock
         Catch ex As Exception
@@ -781,6 +831,95 @@ Partial Public Class FrmMain
             End If
         Catch ex As Exception
             Log.WriteException(ex, "[UDP] Error updating hub IP address")
+        End Try
+    End Sub
+
+#End Region
+
+#Region "Message Clearing Timer"
+
+    ''' <summary>
+    ''' Sets up a timer to clear the TsslMessages text after a specified duration.
+    ''' For rain: clears 15 minutes after the rain start time.
+    ''' For lightning: clears 30 minutes after the strike time.
+    ''' </summary>
+    Private Sub SetupMessageClearTimer(messageType As String, eventTimestamp As DateTime, durationMinutes As Integer)
+        Try
+            ' Stop existing timer if any
+            If _messageTimer IsNot Nothing Then
+                _messageTimer.Stop()
+                _messageTimer.Dispose()
+                _messageTimer = Nothing
+            End If
+
+            ' Track current message
+            _currentMessageType = messageType
+            _currentMessageTimestamp = eventTimestamp
+
+            ' Calculate when to clear the message (event time + duration)
+            Dim clearTime = eventTimestamp.AddMinutes(durationMinutes)
+            Dim delay = clearTime - DateTime.Now
+
+            ' If the clear time is in the past, clear immediately
+            If delay.TotalMilliseconds <= 0 Then
+                Log.Write($"[Message Timer] {messageType} message clear time is in the past, clearing now")
+                ClearMessage()
+                Return
+            End If
+
+            ' Create and start timer
+            _messageTimer = New Timer With {
+                .Interval = CInt(delay.TotalMilliseconds)
+            }
+            AddHandler _messageTimer.Tick, AddressOf OnMessageTimerTick
+            _messageTimer.Start()
+
+            Log.Write($"[Message Timer] Set timer to clear {messageType} message in {delay.TotalMinutes:F1} minutes (at {clearTime:yyyy-MM-dd HH:mm:ss})")
+        Catch ex As Exception
+            Log.WriteException(ex, "[Message Timer] Error setting up message clear timer")
+        End Try
+    End Sub
+
+    ''' <summary>
+    ''' Timer callback to clear the message
+    ''' </summary>
+    Private Sub OnMessageTimerTick(sender As Object, e As EventArgs)
+        Try
+            Log.Write($"[Message Timer] Timer elapsed, clearing {_currentMessageType} message")
+            ClearMessage()
+        Catch ex As Exception
+            Log.WriteException(ex, "[Message Timer] Error in timer tick handler")
+        End Try
+    End Sub
+
+    ''' <summary>
+    ''' Clears the TsslMessages text and stops the timer
+    ''' </summary>
+    Private Sub ClearMessage()
+        Try
+            ' Stop and dispose timer
+            If _messageTimer IsNot Nothing Then
+                _messageTimer.Stop()
+                _messageTimer.Dispose()
+                _messageTimer = Nothing
+            End If
+
+            ' Clear message on UI thread
+            If TsslMessages IsNot Nothing Then
+                UIService.SafeInvoke(Me, Sub()
+                                             If TsslMessages IsNot Nothing Then
+                                                 TsslMessages.Text = "-"
+                                             End If
+                                         End Sub)
+            End If
+
+            ' Clear tracking variables
+            _currentMessageType = ""
+            _currentMessageTimestamp = DateTime.MinValue
+
+            Log.Write("[Message Timer] Message cleared")
+        Catch ex As Exception
+            Log.WriteException(ex, "[Message Timer] Error clearing message")
         End Try
     End Sub
 

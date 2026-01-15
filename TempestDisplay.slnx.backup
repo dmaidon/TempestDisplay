@@ -1,5 +1,5 @@
 <Solution>
-  <Project Path="TempestDisplay.Help/TempestDisplay.Help.vbproj" />
+  <Project Path="../WeatherFusion/WxFusion.Help/WxFusion.Help.vbproj" />
   <Project Path="TempestDisplay.Common/TempestDisplay.Common.vbproj">
     <BuildDependency Project="TempestDisplay.Controls/TempestDisplay.Controls.vbproj" />
   </Project>

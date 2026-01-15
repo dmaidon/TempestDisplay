@@ -97,11 +97,26 @@ Public Class FrmMain
         ' Setup watcher
         SetupSettingsFileWatcher()
 
+        ' Initialize Settings Help System
+        Try
+            InitializeSettingsHelp()
+        Catch ex As Exception
+            Log.WriteException(ex, "Failed to initialize settings help system")
+        End Try
+
         ' Initialize RtbLogs context menu
         Try
             InitializeRtbLogsContextMenu()
         Catch ex As Exception
             Log.WriteException(ex, "Failed to initialize RtbLogs context menu")
+        End Try
+
+        ' Initialize Help System
+        Try
+            InitializeHelpTab()
+            SetupHelpTooltips()
+        Catch ex As Exception
+            Log.WriteException(ex, "Failed to initialize help system")
         End Try
 
         ' Start timer last (after everything is initialized)
@@ -135,17 +150,17 @@ Public Class FrmMain
                 Catch ex As Exception
                     Log.WriteException(ex, "Error clearing RtbLogs text on TpLogs enter.")
                 End Try
+            End If
 
-                ' Also initialize battery chart if Charts tab is currently selected in nested TcLogs
-                If TcLogs IsNot Nothing AndAlso TcLogs.SelectedTab IsNot Nothing AndAlso TcLogs.SelectedTab.Name = "TpCharts" Then
-                    Log.Write("[Charts Tab] Entered Charts tab (nested in Logs), attempting to initialize battery chart")
-                    Try
-                        InitializeBatteryChart()
-                        Log.Write("[Charts Tab] Battery chart initialization completed")
-                    Catch ex As Exception
-                        Log.WriteException(ex, "[Charts Tab] CRITICAL: Error initializing battery chart - this may cause issues")
-                    End Try
-                End If
+            ' Initialize battery chart when Charts tab is selected
+            If current IsNot Nothing AndAlso current.Name = "TpCharts" Then
+                Log.Write("[Charts Tab] Entered Charts tab, attempting to initialize battery chart")
+                Try
+                    InitializeBatteryChart()
+                    Log.Write("[Charts Tab] Battery chart initialization completed")
+                Catch ex As Exception
+                    Log.WriteException(ex, "[Charts Tab] CRITICAL: Error initializing battery chart - this may cause issues")
+                End Try
             End If
 
             ' Load HiLo records when Records tab is accessed
@@ -239,16 +254,8 @@ Public Class FrmMain
     ''' </summary>
     Private Sub TcLogs_SelectedIndexChanged(sender As Object, e As EventArgs) Handles TcLogs.SelectedIndexChanged
         Try
-            ' When switching to TpCharts tab within TcLogs, initialize the battery chart
-            If TcLogs.SelectedTab IsNot Nothing AndAlso TcLogs.SelectedTab.Name = "TpCharts" Then
-                Log.Write("[TcLogs] Switched to Charts tab, attempting to initialize battery chart")
-                Try
-                    InitializeBatteryChart()
-                    Log.Write("[TcLogs] Battery chart initialization completed")
-                Catch ex As Exception
-                    Log.WriteException(ex, "[TcLogs] Error initializing battery chart")
-                End Try
-            End If
+            ' TcLogs tab control handler - TpCharts is now in the main Tc tab control
+            ' Add any future TcLogs-specific tab handling here if needed
         Catch ex As Exception
             Log.WriteException(ex, "Error in TcLogs_SelectedIndexChanged")
         End Try
@@ -381,4 +388,7 @@ Public Class FrmMain
         End Try
     End Sub
 
+    Private Sub TpHelp_Click(sender As Object, e As EventArgs) Handles TpHelp.Click
+
+    End Sub
 End Class

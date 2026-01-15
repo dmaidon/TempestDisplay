@@ -28,13 +28,11 @@ Public Class UdpLogService
         SyncLock _initLock
             If _initialized Then Return
 
-            ' Create log directory if needed
-            If Not Directory.Exists(Globals.LogDir) Then
-                Directory.CreateDirectory(Globals.LogDir)
-            End If
+            ' Use LogRoutines for directory management
+            LogRoutines.EnsureDirectoryExists(Globals.LogDir)
 
-            ' Set UDP log path with date-based naming (one per day)
-            Globals.UdpLog = Path.Combine(Globals.LogDir, $"udp_{Now:MMMdd}.log")
+            ' Set UDP log path with date-based naming (one per day) using LogRoutines
+            Globals.UdpLog = LogRoutines.GetLogPath(LogRoutines.CreateLogFileName("udp", includeAppStarts:=False))
 
             Try
                 ' Open/create UDP log file
@@ -43,9 +41,10 @@ Public Class UdpLogService
                     .NewLine = vbCrLf
                 }
 
-                ' Write header if new file
+                ' Write header if new file using LogRoutines
                 If New FileInfo(Globals.UdpLog).Length = 0 Then
-                    _sw.WriteLine(CreateUdpLogHeader())
+                    Dim header = LogRoutines.CreateDecoratedLogHeader("Tempest Display UDP Observation Log (obs_st packets)", Globals.UdpLog)
+                    _sw.Write(header)
                 End If
             Catch ex As Exception
                 ' If opening fails, fallback to null writer
@@ -61,17 +60,6 @@ Public Class UdpLogService
             Log.Write($"UdpLogService initialized. Log file: {Globals.UdpLog}")
         End SyncLock
     End Sub
-
-    Private Shared Function CreateUdpLogHeader() As String
-        Dim sb As New Text.StringBuilder()
-        sb.AppendLine("═══════════════════════════════════════════════════════════════")
-        sb.AppendLine("Tempest Display UDP Observation Log (obs_st packets)")
-        sb.AppendLine($"Log File: {Globals.UdpLog}")
-        sb.AppendLine($"Generated on: {Now:F}")
-        sb.AppendLine("═══════════════════════════════════════════════════════════════")
-        sb.AppendLine()
-        Return sb.ToString()
-    End Function
 
     Private Sub ProcessQueueAsync()
         Try

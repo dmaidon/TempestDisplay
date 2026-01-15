@@ -60,15 +60,18 @@ Public Class LogService
         End While
         SyncLock _initLock
             If _initialized Then Return
-            LogFile = Path.Combine(Globals.LogDir, $"td_{Now:MMMdd}-{Globals.AppStarts}.log")
-            UdpLog = Path.Combine(Globals.LogDir, $"udp_{Now:MMMdd}.log")
-            Dim errorLogFile = Path.Combine(Globals.LogDir, $"err_{Now:MMMdd}-{Globals.AppStarts}.log")
+
+            ' Use LogRoutines for consistent file naming
+            LogFile = LogRoutines.GetLogPath(LogRoutines.CreateLogFileName("td", includeAppStarts:=True))
+            UdpLog = LogRoutines.GetLogPath(LogRoutines.CreateLogFileName("udp", includeAppStarts:=False))
+            Dim errorLogFile = LogRoutines.GetLogPath(LogRoutines.CreateLogFileName("err", includeAppStarts:=True))
 
             Dim logPath = If(String.IsNullOrWhiteSpace(Globals.LogFile), LogFile, Globals.LogFile)
 
+            ' Use LogRoutines for directory management
             Dim logDir = Path.GetDirectoryName(logPath)
-            If Not String.IsNullOrEmpty(logDir) AndAlso Not Directory.Exists(logDir) Then
-                Directory.CreateDirectory(logDir)
+            If Not String.IsNullOrEmpty(logDir) Then
+                LogRoutines.EnsureDirectoryExists(logDir)
             End If
 
             ' Check if this is a new file (doesn't exist or is empty)
@@ -78,9 +81,9 @@ Public Class LogService
             Try
                 _sw = New StreamWriter(File.Open(logPath, FileMode.Append, FileAccess.Write, FileShare.Read)) With {.AutoFlush = True, .NewLine = vbCrLf}
 
-                ' Write header to new files
+                ' Write header to new files using LogRoutines
                 If isNewFile AndAlso _sw IsNot Nothing Then
-                    Dim header = CreateLogHeader()
+                    Dim header = LogRoutines.CreateLogHeader("Tempest Display Log File", logPath)
                     _sw.Write(header)
                     _sw.Flush()
                 End If
@@ -93,9 +96,9 @@ Public Class LogService
             Try
                 _swError = New StreamWriter(File.Open(errorLogFile, FileMode.Append, FileAccess.Write, FileShare.Read)) With {.AutoFlush = True, .NewLine = vbCrLf}
 
-                ' Write header to new error log files
+                ' Write header to new error log files using LogRoutines
                 If isNewErrorFile AndAlso _swError IsNot Nothing Then
-                    Dim errorHeader = CreateErrorLogHeader()
+                    Dim errorHeader = LogRoutines.CreateLogHeader("Tempest Display Error Log File", errorLogFile)
                     _swError.Write(errorHeader)
                     _swError.Flush()
                 End If
@@ -176,26 +179,6 @@ Public Class LogService
             ' Best-effort - ignore
         End Try
     End Sub
-
-    Private Shared Function CreateLogHeader() As String
-        Dim sb As New Text.StringBuilder()
-        sb.AppendLine("Tempest Display Log File")
-        sb.AppendLine($"LogFile: {Globals.LogFile}")
-        sb.AppendLine($"Generated on: {Now:F}")
-        sb.AppendLine($"Application Version: {Application.ProductVersion}")
-        sb.AppendLine(New String("-"c, 50))
-        Return sb.ToString()
-    End Function
-
-    Private Shared Function CreateErrorLogHeader() As String
-        Dim sb As New Text.StringBuilder()
-        sb.AppendLine("Tempest Display Error Log File")
-        sb.AppendLine($"LogFile: {Path.Combine(Globals.LogDir, $"err_{Now:MMMdd}-{Globals.AppStarts}.log")}")
-        sb.AppendLine($"Generated on: {Now:F}")
-        sb.AppendLine($"Application Version: {Application.ProductVersion}")
-        sb.AppendLine(New String("-"c, 50))
-        Return sb.ToString()
-    End Function
 
     Private Shared Function GetLevelString(level As LogLevel) As String
         Select Case level

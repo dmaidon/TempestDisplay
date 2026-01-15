@@ -4,7 +4,12 @@
       "Bash(dotnet build:*)",
       "Bash(Select-Object -First 50)",
       "Bash(dir:*)",
-      "Bash(powershell:*)"
+      "Bash(powershell:*)",
+      "Bash(Select-Object -First 5)",
+      "Bash(find:*)",
+      "Bash(ls:*)",
+      "Bash(cmd /c \"dir %LocalAppData%\\\\Microsoft\\\\VisualStudio /b /ad 2>nul\")",
+      "Bash(echo:*)"
     ],
     "deny": [],
     "ask": []

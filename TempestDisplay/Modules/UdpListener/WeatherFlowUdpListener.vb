@@ -1,6 +1,7 @@
 Imports System.IO
 Imports System.Net
 Imports System.Net.Sockets
+Imports System.Net.NetworkInformation
 Imports System.Text
 Imports System.Text.Json
 Imports System.Threading
@@ -54,6 +55,16 @@ Public Class WeatherFlowUdpListener
         End If
 
         Try
+            ' Check if port is already in use
+            Dim activeUdpListeners = IPGlobalProperties.GetIPGlobalProperties().GetActiveUdpListeners()
+            Dim portInUse = activeUdpListeners.Any(Function(ep) ep.Port = UDP_PORT)
+
+            If portInUse Then
+                Dim msg = $"WeatherFlowUdpListener: Port {UDP_PORT} is already in use. Another instance may be running."
+                Log.Write(msg)
+                Throw New InvalidOperationException(msg)
+            End If
+
             ' Prepare daily message log for the current day
             EnsureDailyMessageLogReady()
 
@@ -69,6 +80,11 @@ Public Class WeatherFlowUdpListener
             _listenerTask = Task.Run(AddressOf ListenForMessagesAsync, _cancellationTokenSource.Token)
 
             Log.Write("WeatherFlowUdpListener: Started listening on UDP port " & UDP_PORT)
+        Catch ex As SocketException
+            _isListening = False
+            Log.Write($"WeatherFlowUdpListener: SocketException starting listener - ErrorCode: {ex.ErrorCode}, SocketErrorCode: {ex.SocketErrorCode}, NativeErrorCode: {ex.NativeErrorCode}")
+            Log.WriteException(ex, "WeatherFlowUdpListener: SocketException details")
+            Throw
         Catch ex As Exception
             _isListening = False
             Log.WriteException(ex, "WeatherFlowUdpListener: Error starting UDP listener")
@@ -136,13 +152,25 @@ Public Class WeatherFlowUdpListener
                     ParseAndRouteMessage(jsonMessage, remoteEP)
                 Catch ex As ObjectDisposedException
                     ' UDP client was disposed, exit loop
+                    Log.Write("WeatherFlowUdpListener: ObjectDisposedException - UDP client was disposed, exiting listener loop")
                     Exit While
                 Catch ex As OperationCanceledException
                     ' Cancellation requested, exit loop
+                    Log.Write("WeatherFlowUdpListener: OperationCanceledException - cancellation requested, exiting listener loop")
                     Exit While
                 Catch ex As SocketException When ex.ErrorCode = 995 OrElse ex.ErrorCode = 10004
                     ' Socket operation was aborted (995) or interrupted (10004) - normal shutdown
+                    Log.Write($"WeatherFlowUdpListener: SocketException during shutdown - ErrorCode: {ex.ErrorCode}, exiting listener loop")
                     Exit While
+                Catch ex As SocketException
+                    ' Log detailed socket exception info and continue listening
+                    Log.Write($"WeatherFlowUdpListener: SocketException receiving message - ErrorCode: {ex.ErrorCode}, SocketErrorCode: {ex.SocketErrorCode}, NativeErrorCode: {ex.NativeErrorCode}, Message: {ex.Message}")
+                    Log.WriteException(ex, "WeatherFlowUdpListener: SocketException details (continuing)")
+                    ' Continue listening unless it's a fatal error
+                    If ex.SocketErrorCode = SocketError.NetworkDown OrElse ex.SocketErrorCode = SocketError.NetworkUnreachable Then
+                        Log.Write("WeatherFlowUdpListener: Fatal network error detected, exiting listener loop")
+                        Exit While
+                    End If
                 Catch ex As Exception
                     ' Log error but continue listening
                     Log.WriteException(ex, "WeatherFlowUdpListener: Error receiving UDP message")

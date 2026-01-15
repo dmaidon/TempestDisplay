@@ -17,8 +17,8 @@
 		<Company>PAROLE Software</Company>
 		<Copyright>©2025 PAROLE Software</Copyright>
 		<NeutralLanguage>en-US</NeutralLanguage>
-		<AssemblyVersion>25.12.24.853</AssemblyVersion>
-		<FileVersion>25.12.24.853</FileVersion>
+		<AssemblyVersion>26.1.14.921</AssemblyVersion>
+		<FileVersion>26.1.14.921</FileVersion>
 		<Version>$(AssemblyVersion)</Version>
 		<PackageVersion>$(AssemblyVersion)</PackageVersion>
 		<AnalysisLevel>latest</AnalysisLevel>
@@ -150,9 +150,9 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<Folder Include="Documents\" />
 		<Folder Include="Images\" />
 		<Folder Include="AppSettings\" />
+		<Folder Include="Modules\Help\" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -178,5 +178,6 @@
 	<ItemGroup>
 	  <ProjectReference Include="..\TempestDisplay.Common\TempestDisplay.Common.vbproj" />
 	  <ProjectReference Include="..\TempestDisplay.Controls\TempestDisplay.Controls.vbproj" />
+	  <ProjectReference Include="..\TempestDisplay.Help\TempestDisplay.Help.vbproj" />
 	</ItemGroup>
 </Project>

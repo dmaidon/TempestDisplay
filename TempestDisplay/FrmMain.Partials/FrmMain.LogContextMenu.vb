@@ -1,7 +1,3 @@
-''' <summary>
-''' FrmMain partial class for RtbLogs context menu functionality
-''' Handles right-click menu operations for read-only log viewer
-''' </summary>
 Partial Public Class FrmMain
 
     Private WithEvents RtbLogsContextMenu As ContextMenuStrip

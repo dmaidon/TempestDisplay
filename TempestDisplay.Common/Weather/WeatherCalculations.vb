@@ -8,6 +8,16 @@ Namespace Weather
 
         ''DO NOT delete: https://apidocs.tempestwx.com/reference/derived-metrics
 
+        Private Const MinHumidityPercent As Double = 0.0
+        Private Const MaxHumidityPercent As Double = 100.0
+        Private Const MinPressureMb As Double = 0.1
+
+        Private Function Clamp(value As Double, minValue As Double, maxValue As Double) As Double
+            If value < minValue Then Return minValue
+            If value > maxValue Then Return maxValue
+            Return value
+        End Function
+
         ''' <summary>
         ''' Calculate Heat Index in Fahrenheit
         ''' Valid when temperature >= 80°F and humidity >= 40%
@@ -17,6 +27,8 @@ Namespace Weather
         ''' <param name="humidity">Relative humidity as percentage (0-100)</param>
         ''' <returns>Heat Index in Fahrenheit, or temperature if conditions don't warrant heat index</returns>
         Public Function CalculateHeatIndex(tempF As Double, humidity As Double) As Double
+            humidity = Clamp(humidity, MinHumidityPercent, MaxHumidityPercent)
+
             ' Heat Index only applies when temp >= 80°F
             If tempF < 80 Then
                 Return tempF
@@ -61,6 +73,10 @@ Namespace Weather
         ''' <param name="windSpeedMph">Wind speed in mph</param>
         ''' <returns>Wind Chill in Fahrenheit, or temperature if conditions don't warrant wind chill</returns>
         Public Function CalculateWindChill(tempF As Double, windSpeedMph As Double) As Double
+            If Double.IsNaN(windSpeedMph) OrElse Double.IsInfinity(windSpeedMph) Then
+                Return tempF
+            End If
+
             ' Wind chill only applies when temp <= 50°F and wind >= 3 mph
             If tempF > 50 OrElse windSpeedMph < 3 Then
                 Return tempF
@@ -84,6 +100,8 @@ Namespace Weather
         ''' <param name="windSpeedMph">Wind speed in mph</param>
         ''' <returns>"Feels Like" temperature in Fahrenheit</returns>
         Public Function CalculateFeelsLike(tempF As Double, humidity As Double, windSpeedMph As Double) As Double
+            humidity = Clamp(humidity, MinHumidityPercent, MaxHumidityPercent)
+
             If tempF >= 80 Then
                 ' Hot weather - use heat index
                 Return CalculateHeatIndex(tempF, humidity)
@@ -104,6 +122,10 @@ Namespace Weather
         ''' <param name="humidity">Relative humidity as percentage (0-100)</param>
         ''' <returns>Dew Point in Fahrenheit</returns>
         Public Function CalculateDewPoint(tempF As Double, humidity As Double) As Double
+            humidity = Clamp(humidity, MinHumidityPercent, MaxHumidityPercent)
+
+            ' Guard against Log(0) when humidity is 0; 0.1% keeps output finite
+            Dim humidityForLog = Math.Max(0.1, humidity)
 
             ' Convert to Celsius for calculation
             Dim tempC = (tempF - 32.0) * 5.0 / 9.0
@@ -113,7 +135,7 @@ Namespace Weather
             Const b As Double = 237.7
 
             ' Calculate alpha (intermediate value)
-            Dim alpha = ((a * tempC) / (b + tempC)) + Math.Log(humidity / 100.0)
+            Dim alpha = ((a * tempC) / (b + tempC)) + Math.Log(humidityForLog / 100.0)
 
             ' Calculate dew point in Celsius
             Dim dewPointC = (b * alpha) / (a - alpha)
@@ -133,9 +155,13 @@ Namespace Weather
         ''' <param name="humidity">Relative humidity as percentage (0-100)</param>
         ''' <returns>Air density in kg/m³</returns>
         Public Function CalculateAirDensity(tempF As Double, pressureMb As Double, humidity As Double) As Double
+            humidity = Clamp(humidity, MinHumidityPercent, MaxHumidityPercent)
+            If pressureMb <= 0 Then Return 0
+
             ' Convert temperature to Kelvin
             Dim tempC = (tempF - 32.0) * 5.0 / 9.0
             Dim tempK = tempC + 273.15
+            If tempK <= 0 Then Return 0
 
             ' Convert pressure from millibars to Pascals (1 mb = 100 Pa)
             Dim pressurePa = pressureMb * 100.0
@@ -149,6 +175,8 @@ Namespace Weather
 
             ' Calculate actual vapor pressure from relative humidity
             Dim Pv = (humidity / 100.0) * es
+            If Pv < 0 Then Pv = 0
+            If Pv > pressurePa Then Pv = pressurePa
 
             ' Calculate partial pressure of dry air
             Dim Pd = pressurePa - Pv
@@ -192,8 +220,12 @@ Namespace Weather
         ''' <param name="actualAltitudeFt">Actual elevation above sea level in feet (optional, default 0)</param>
         ''' <returns>Density altitude in feet</returns>
         Public Function CalculateDensityAltitude(tempF As Double, pressureMb As Double, humidity As Double) As Double
+            humidity = Clamp(humidity, MinHumidityPercent, MaxHumidityPercent)
+
+            Dim pressureMbSafe = Math.Max(MinPressureMb, pressureMb)
+
             ' Convert pressure to inHg for calculation (1 mb = 0.02953 inHg)
-            Dim pressureInHg = pressureMb * 0.02953
+            Dim pressureInHg = pressureMbSafe * 0.02953
 
             ' Calculate dew point for vapor pressure correction
             Dim dewPointF = CalculateDewPoint(tempF, humidity)
@@ -203,8 +235,12 @@ Namespace Weather
             Dim vaporPressureMb = 6.11 * Math.Pow(10, (7.5 * dewPointC) / (237.3 + dewPointC))
             Dim vaporPressureInHg = vaporPressureMb * 0.02953
 
+            ' Avoid divide by 0 / negative denominators in virtual temp calc
+            Dim denom = 1 - (vaporPressureInHg / pressureInHg) * (1 - 0.622)
+            If denom <= 0 Then denom = 0.000001
+
             ' Calculate virtual temperature (temperature corrected for moisture)
-            Dim virtualTempK = ((tempF - 32.0) * 5.0 / 9.0 + 273.15) / (1 - (vaporPressureInHg / pressureInHg) * (1 - 0.622))
+            Dim virtualTempK = ((tempF - 32.0) * 5.0 / 9.0 + 273.15) / denom
 
             ' Standard atmosphere constants
             Const stdTempK As Double = 288.15        ' Standard temp at sea level (15°C = 59°F)
@@ -269,11 +305,17 @@ Namespace Weather
             End If
         End Function
 
-        ' Cloud Base in feet AGL (Above Ground Level)
-        Function CalculateCloudBase(tempF As Double, humidity As Double) As Double
+        ''' <summary>
+        ''' Cloud Base in feet AGL (Above Ground Level)
+        ''' Rule of thumb using temperature (°F) and dew point (°F).
+        ''' </summary>
+        Public Function CalculateCloudBase(tempF As Double, humidity As Double) As Double
+            humidity = Clamp(humidity, MinHumidityPercent, MaxHumidityPercent)
+
             Dim dewPoint = CalculateDewPoint(tempF, humidity)
-            Dim cloudBaseFeet = ((tempF - dewPoint) / 4.4) * 1000
-            Return cloudBaseFeet
+            Dim cloudBaseFeet = ((tempF - dewPoint) / 4.4) * 1000.0
+
+            Return Math.Round(Math.Max(0.0, cloudBaseFeet), 0)
         End Function
 
     End Module

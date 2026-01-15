@@ -47,6 +47,10 @@ Public Module WeatherCalculations
         Return TempestDisplay.Common.Weather.WeatherCalculations.GetFeelsLikeLabel(tempF, windSpeedMph)
     End Function
 
+    Public Function CalculateCloudBase(tempF As Double, humidity As Double) As Double
+        Return TempestDisplay.Common.Weather.WeatherCalculations.CalculateCloudBase(tempF, humidity)
+    End Function
+
     ' Unit Conversion Functions from the DLL
     Public Function DegreesToCardinal(degrees As Integer) As String
         Return TempestDisplay.Common.Weather.UnitConversions.DegreesToCardinal(degrees)
