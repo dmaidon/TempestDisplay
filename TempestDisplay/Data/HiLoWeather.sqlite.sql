@@ -1,3 +1,4 @@
+-- Last Edit: January 15, 2026 (Added wind averaging accumulators for vector-based direction averaging, added performance indexes)
 -- SQLite schema for TempestDisplay hi-lo tracking
 -- Stored under DataDir (Globals.DataDir)
 
@@ -33,8 +34,15 @@ CREATE TABLE IF NOT EXISTS HiLoDaily (
     -- Wind
     WindSpeedHigh REAL,                -- daily peak avg/gust mph
     WindSpeedHighTime TEXT,
-    WindSpeedAvg REAL,                 -- running daily average mph
-    WindDirAvg REAL,                   -- daily average direction degrees
+    WindSpeedAvg REAL,                 -- computed daily average mph
+    WindDirAvg REAL,                   -- computed daily average direction degrees
+
+    -- Wind averaging accumulators (for proper vector-based direction averaging)
+    WindSpeedTotal REAL DEFAULT 0,     -- cumulative sum for speed
+    WindSpeedCount INTEGER DEFAULT 0,  -- sample count for speed
+    WindDirSumX REAL DEFAULT 0,        -- X component of direction vector sum
+    WindDirSumY REAL DEFAULT 0,        -- Y component of direction vector sum
+    WindDirSampleCount INTEGER DEFAULT 0, -- sample count for direction
 
     -- UV Index
     UVIndexHigh REAL,
@@ -48,6 +56,8 @@ CREATE TABLE IF NOT EXISTS HiLoDaily (
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS IX_HiLoDaily_ObsDate ON HiLoDaily(ObsDate);
+CREATE INDEX IF NOT EXISTS IX_HiLoDaily_LastUpdated ON HiLoDaily(LastUpdated);
+CREATE INDEX IF NOT EXISTS IX_HiLoDaily_TempHighTime ON HiLoDaily(TempHighTime);
 
 -- Global all-time records (single-row table)
 CREATE TABLE IF NOT EXISTS HiLoAllTime (

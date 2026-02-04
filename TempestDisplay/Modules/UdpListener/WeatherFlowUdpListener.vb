@@ -1,3 +1,4 @@
+' Last Edit: January 15, 2026 (Removed blocking File I/O, made events async, added statistics, optimized log checks, added timeout)
 Imports System.IO
 Imports System.Net
 Imports System.Net.Sockets
@@ -13,6 +14,9 @@ Public Class WeatherFlowUdpListener
     Implements IDisposable
 
     Private Const UDP_PORT As Integer = 50222
+    Private Const UDP_RECEIVE_TIMEOUT_MS As Integer = 30000 ' 30 second timeout
+    Private Const LOG_CHECK_INTERVAL_SECONDS As Integer = 300 ' Check every 5 minutes instead of every packet
+
     Private _udpClient As UdpClient
     Private _isListening As Boolean = False
     Private _listenerTask As Task
@@ -21,8 +25,14 @@ Public Class WeatherFlowUdpListener
 
     ' Daily message log tracking
     Private _currentLogDate As Date = Date.MinValue
-
     Private _currentLogPath As String = Nothing
+    Private _lastLogCheck As DateTime = DateTime.MinValue
+
+    ' Message statistics
+    Private _totalMessagesReceived As Long = 0
+    Private _messagesReceivedLastMinute As Long = 0
+    Private _lastMessageTime As DateTime = DateTime.MinValue
+    Private _statsResetTime As DateTime = DateTime.Now
 
     ' Events for different message types
     Public Event RapidWindReceived As EventHandler(Of RapidWindEventArgs)
@@ -116,7 +126,7 @@ Public Class WeatherFlowUdpListener
 
             If _listenerTask IsNot Nothing Then
                 Try
-                    _listenerTask.Wait(2000) ' Wait up to 2 seconds
+                    _listenerTask.Wait(1000) ' Wait up to 1 second (reduced from 2 seconds)
                 Catch ex As AggregateException
                     ' Task was cancelled, this is expected
                 End Try
@@ -134,19 +144,42 @@ Public Class WeatherFlowUdpListener
         Try
             While _isListening AndAlso Not _cancellationTokenSource.Token.IsCancellationRequested
                 Try
-                    ' Receive UDP message asynchronously
-                    Dim result = Await _udpClient.ReceiveAsync().ConfigureAwait(False)
+                    ' Receive UDP message asynchronously with timeout
+                    Dim receiveTask = _udpClient.ReceiveAsync()
+                    Dim timeoutTask = Task.Delay(UDP_RECEIVE_TIMEOUT_MS, _cancellationTokenSource.Token)
+                    Dim completedTask = Await Task.WhenAny(receiveTask, timeoutTask).ConfigureAwait(False)
+
+                    If completedTask Is timeoutTask Then
+                        Log.Write($"WeatherFlowUdpListener: No data received for {UDP_RECEIVE_TIMEOUT_MS / 1000} seconds")
+                        Continue While
+                    End If
+
+                    Dim result = Await receiveTask
                     Dim receivedBytes = result.Buffer
                     remoteEP = result.RemoteEndPoint
 
                     ' Convert bytes to string
                     Dim jsonMessage = Encoding.UTF8.GetString(receivedBytes)
 
-                    ' Ensure the daily log file is ready for the current date
-                    EnsureDailyMessageLogReady()
+                    ' Update statistics
+                    _totalMessagesReceived += 1
+                    _messagesReceivedLastMinute += 1
+                    _lastMessageTime = DateTime.Now
 
-                    ' Raise raw message event
-                    RaiseEvent RawMessageReceived(Me, New RawMessageEventArgs(jsonMessage, remoteEP))
+                    ' Reset per-minute counter every minute
+                    If (DateTime.Now - _statsResetTime).TotalSeconds >= 60 Then
+                        _messagesReceivedLastMinute = 0
+                        _statsResetTime = DateTime.Now
+                    End If
+
+                    ' Check if we need to update log file (only every 5 minutes instead of every packet)
+                    If (DateTime.Now - _lastLogCheck).TotalSeconds >= LOG_CHECK_INTERVAL_SECONDS Then
+                        EnsureDailyMessageLogReady()
+                        _lastLogCheck = DateTime.Now
+                    End If
+
+                    ' Raise raw message event asynchronously (non-blocking) - intentionally not awaited
+                    Dim ignoredTask = Task.Run(Sub() RaiseEvent RawMessageReceived(Me, New RawMessageEventArgs(jsonMessage, remoteEP)))
 
                     ' Parse and route the message
                     ParseAndRouteMessage(jsonMessage, remoteEP)
@@ -244,14 +277,11 @@ Public Class WeatherFlowUdpListener
                     Dim windSpeed = ob(1).GetDouble()
                     Dim windDirection = ob(2).GetInt32()
 
-                    Dim args As New RapidWindEventArgs With {
-                        .Timestamp = DateTimeOffset.FromUnixTimeSeconds(timestamp).LocalDateTime,
-                        .WindSpeed = windSpeed,
-                        .WindDirection = windDirection,
-                        .RemoteEndPoint = remoteEP
-                    }
+                    Dim dt = DateTimeOffset.FromUnixTimeSeconds(timestamp).LocalDateTime
+                    Dim args As New RapidWindEventArgs(dt, windSpeed, windDirection, remoteEP)
 
-                    RaiseEvent RapidWindReceived(Me, args)
+                    ' Raise event asynchronously to avoid blocking UDP receive loop - intentionally not awaited
+                    Dim ignoredTask = Task.Run(Sub() RaiseEvent RapidWindReceived(Me, args))
                 End If
             End If
         Catch ex As Exception
@@ -265,14 +295,12 @@ Public Class WeatherFlowUdpListener
             If root.TryGetProperty("obs", Nothing) Then
                 Dim obsArray = root.GetProperty("obs")
                 If obsArray.GetArrayLength() > 0 Then
-                    Dim ob = obsArray(0) ' First observation
+                    ' Capture raw JSON before JsonDocument is disposed
+                    Dim rawJson As String = root.GetRawText()
+                    Dim args As New ObservationEventArgs(rawJson, remoteEP)
 
-                    Dim args As New ObservationEventArgs With {
-                        .RawJson = root.GetRawText(),
-                        .RemoteEndPoint = remoteEP
-                    }
-
-                    RaiseEvent ObservationReceived(Me, args)
+                    ' Raise event asynchronously to avoid blocking UDP receive loop - intentionally not awaited
+                    Dim ignoredTask = Task.Run(Sub() RaiseEvent ObservationReceived(Me, args))
                 End If
             End If
         Catch ex As Exception
@@ -282,12 +310,12 @@ Public Class WeatherFlowUdpListener
 
     Private Sub ProcessDeviceStatus(root As JsonElement, remoteEP As IPEndPoint)
         Try
-            Dim args As New DeviceStatusEventArgs With {
-                .RawJson = root.GetRawText(),
-                .RemoteEndPoint = remoteEP
-            }
+            ' Capture raw JSON before JsonDocument is disposed
+            Dim rawJson As String = root.GetRawText()
+            Dim args As New DeviceStatusEventArgs(rawJson, remoteEP)
 
-            RaiseEvent DeviceStatusReceived(Me, args)
+            ' Raise event asynchronously to avoid blocking UDP receive loop - intentionally not awaited
+            Dim ignoredTask = Task.Run(Sub() RaiseEvent DeviceStatusReceived(Me, args))
         Catch ex As Exception
             Log.WriteException(ex, "WeatherFlowUdpListener: Error processing device_status")
         End Try
@@ -295,12 +323,12 @@ Public Class WeatherFlowUdpListener
 
     Private Sub ProcessHubStatus(root As JsonElement, remoteEP As IPEndPoint)
         Try
-            Dim args As New HubStatusEventArgs With {
-                .RawJson = root.GetRawText(),
-                .RemoteEndPoint = remoteEP
-            }
+            ' Capture raw JSON before JsonDocument is disposed
+            Dim rawJson As String = root.GetRawText()
+            Dim args As New HubStatusEventArgs(rawJson, remoteEP)
 
-            RaiseEvent HubStatusReceived(Me, args)
+            ' Raise event asynchronously to avoid blocking UDP receive loop - intentionally not awaited
+            Dim ignoredTask = Task.Run(Sub() RaiseEvent HubStatusReceived(Me, args))
         Catch ex As Exception
             Log.WriteException(ex, "WeatherFlowUdpListener: Error processing hub_status")
         End Try
@@ -313,15 +341,17 @@ Public Class WeatherFlowUdpListener
                 Dim evt = root.GetProperty("evt")
                 If evt.GetArrayLength() >= 1 Then
                     Dim timestamp = evt(0).GetInt64()
+                    Dim dt = DateTimeOffset.FromUnixTimeSeconds(timestamp).LocalDateTime
+                    Dim args As New RainStartEventArgs(dt, remoteEP)
 
-                    Dim args As New RainStartEventArgs With {
-                        .Timestamp = DateTimeOffset.FromUnixTimeSeconds(timestamp).LocalDateTime,
-                        .RemoteEndPoint = remoteEP
-                    }
+                    Log.Write("WeatherFlowUdpListener: Rain start event at " & dt.ToString("yyyy-MM-dd HH:mm:ss"))
 
-                    Log.Write("WeatherFlowUdpListener: Rain start event at " & args.Timestamp.ToString("yyyy-MM-dd HH:mm:ss"))
-                    AppendDailyMessageLog("RainStart " & args.Timestamp.ToString("yyyy-MM-dd HH:mm:ss"))
-                    RaiseEvent RainStartReceived(Me, args)
+                    ' Log to daily message file asynchronously to avoid blocking UDP receive - intentionally not awaited
+                    Dim logMessage As String = "RainStart " & dt.ToString("yyyy-MM-dd HH:mm:ss")
+                    Dim ignoredLogTask = Task.Run(Sub() AppendDailyMessageLog(logMessage))
+
+                    ' Raise event asynchronously to avoid blocking UDP receive loop - intentionally not awaited
+                    Dim ignoredTask = Task.Run(Sub() RaiseEvent RainStartReceived(Me, args))
                 End If
             End If
         Catch ex As Exception
@@ -338,17 +368,18 @@ Public Class WeatherFlowUdpListener
                     Dim timestamp = evt(0).GetInt64()
                     Dim distance = evt(1).GetInt32()
                     Dim energy = evt(2).GetInt32()
+                    Dim dt = DateTimeOffset.FromUnixTimeSeconds(timestamp).LocalDateTime
 
-                    Dim args As New LightningStrikeEventArgs With {
-                        .Timestamp = DateTimeOffset.FromUnixTimeSeconds(timestamp).LocalDateTime,
-                        .Distance = distance,
-                        .Energy = energy,
-                        .RemoteEndPoint = remoteEP
-                    }
+                    Dim args As New LightningStrikeEventArgs(dt, distance, energy, remoteEP)
 
-                    Log.Write("WeatherFlowUdpListener: Lightning strike at " & args.Timestamp.ToString("yyyy-MM-dd HH:mm:ss") & ", distance: " & distance & "km, energy: " & energy)
-                    AppendDailyMessageLog("LightningStrike " & args.Timestamp.ToString("yyyy-MM-dd HH:mm:ss") & " dist=" & distance & "km energy=" & energy)
-                    RaiseEvent LightningStrikeReceived(Me, args)
+                    Log.Write("WeatherFlowUdpListener: Lightning strike at " & dt.ToString("yyyy-MM-dd HH:mm:ss") & ", distance: " & distance & "km, energy: " & energy)
+
+                    ' Log to daily message file asynchronously to avoid blocking UDP receive - intentionally not awaited
+                    Dim logMessage As String = "LightningStrike " & dt.ToString("yyyy-MM-dd HH:mm:ss") & " dist=" & distance & "km energy=" & energy
+                    Dim ignoredLogTask = Task.Run(Sub() AppendDailyMessageLog(logMessage))
+
+                    ' Raise event asynchronously to avoid blocking UDP receive loop - intentionally not awaited
+                    Dim ignoredTask = Task.Run(Sub() RaiseEvent LightningStrikeReceived(Me, args))
                 End If
             End If
         Catch ex As Exception
@@ -401,6 +432,34 @@ Public Class WeatherFlowUdpListener
             Log.WriteException(ex, "WeatherFlowUdpListener: Error in daily log rollover timer")
         End Try
     End Sub
+
+    ''' <summary>
+    ''' Get current message statistics
+    ''' </summary>
+    Public Function GetStatistics() As UdpListenerStatistics
+        Return New UdpListenerStatistics With {
+            .TotalMessagesReceived = _totalMessagesReceived,
+            .MessagesReceivedLastMinute = _messagesReceivedLastMinute,
+            .LastMessageTime = _lastMessageTime,
+            .IsListening = _isListening,
+            .UptimeSeconds = If(_isListening, (DateTime.Now - _statsResetTime).TotalSeconds, 0)
+        }
+    End Function
+
+    ''' <summary>
+    ''' Statistics about UDP listener performance
+    ''' </summary>
+    Public Structure UdpListenerStatistics
+        Public TotalMessagesReceived As Long
+        Public MessagesReceivedLastMinute As Long
+        Public LastMessageTime As DateTime
+        Public IsListening As Boolean
+        Public UptimeSeconds As Double
+
+        Public Overrides Function ToString() As String
+            Return $"UDP Stats: Total={TotalMessagesReceived}, Rate={MessagesReceivedLastMinute}/min, Last={LastMessageTime:HH:mm:ss}, Uptime={UptimeSeconds:F0}s"
+        End Function
+    End Structure
 
     Protected Overridable Sub Dispose(disposing As Boolean)
         If _disposed Then Return

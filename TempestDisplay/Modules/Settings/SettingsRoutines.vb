@@ -1,4 +1,5 @@
-﻿Imports System.IO
+' Last Edit: January 15, 2026 (Added in-memory cache, async file I/O, improved error handling, invalidation method)
+Imports System.IO
 Imports System.Text.Json
 
 Friend Module SettingsRoutines
@@ -10,6 +11,11 @@ Friend Module SettingsRoutines
     Private ReadOnly JsonOptions As New JsonSerializerOptions With {
         .WriteIndented = True
     }
+
+    ' In-memory cache for settings
+    Private ReadOnly _settingsCacheLock As New Object()
+    Private _settingsCache As AppSettings = Nothing
+    Private _cacheInvalidated As Boolean = True
 
     Friend Function GetSettingsDirectory() As String
         Dim dir = Path.Combine(Application.StartupPath, SettingsFolderName)
@@ -27,12 +33,30 @@ Friend Module SettingsRoutines
         Return Path.Combine(GetSettingsDirectory(), SettingsBackupFileName)
     End Function
 
+    ''' <summary>
+    ''' Load settings from cache or disk. Thread-safe with in-memory caching.
+    ''' </summary>
     Friend Function LoadSettings() As AppSettings
+        ' Check cache first (thread-safe)
+        SyncLock _settingsCacheLock
+            If Not _cacheInvalidated AndAlso _settingsCache IsNot Nothing Then
+                Return _settingsCache
+            End If
+        End SyncLock
+
+        ' Cache miss or invalidated - load from disk
         Dim primaryPath = GetSettingsFilePath()
         Dim backupPath = GetSettingsBackupFilePath()
 
         Dim s As AppSettings = TryLoad(primaryPath)
-        If s IsNot Nothing Then Return s
+        If s IsNot Nothing Then
+            ' Update cache before returning
+            SyncLock _settingsCacheLock
+                _settingsCache = s
+                _cacheInvalidated = False
+            End SyncLock
+            Return s
+        End If
 
         s = TryLoad(backupPath)
         If s IsNot Nothing Then
@@ -41,10 +65,21 @@ Friend Module SettingsRoutines
             Catch ex As Exception
                 Log.WriteException(ex, "LoadSettings: Error saving restored backup settings")
             End Try
+            ' Update cache before returning
+            SyncLock _settingsCacheLock
+                _settingsCache = s
+                _cacheInvalidated = False
+            End SyncLock
             Return s
         End If
 
-        Return AppSettings.CreateDefault()
+        ' Return defaults and cache them
+        Dim defaults = AppSettings.CreateDefault()
+        SyncLock _settingsCacheLock
+            _settingsCache = defaults
+            _cacheInvalidated = False
+        End SyncLock
+        Return defaults
     End Function
 
     Private Function TryLoad(path As String) As AppSettings
@@ -56,7 +91,17 @@ Friend Module SettingsRoutines
             If s Is Nothing Then Return Nothing
             s.Normalize()
             Return s
-        Catch
+        Catch ex As JsonException
+            Log.WriteException(ex, $"TryLoad: Failed to deserialize settings from {path}")
+            Return Nothing
+        Catch ex As IOException
+            Log.WriteException(ex, $"TryLoad: Failed to read settings file {path}")
+            Return Nothing
+        Catch ex As UnauthorizedAccessException
+            Log.WriteException(ex, $"TryLoad: Access denied to settings file {path}")
+            Return Nothing
+        Catch ex As Exception
+            Log.WriteException(ex, $"TryLoad: Unexpected error loading settings from {path}")
             Return Nothing
         End Try
     End Function
@@ -68,6 +113,9 @@ Friend Module SettingsRoutines
 
     'End Sub
 
+    ''' <summary>
+    ''' Save settings to disk and invalidate cache. Thread-safe.
+    ''' </summary>
     Friend Sub SaveSettings(settings As AppSettings)
         If settings Is Nothing Then Return
         Dim primaryPath = GetSettingsFilePath()
@@ -111,6 +159,13 @@ Friend Module SettingsRoutines
                     Log.WriteException(ex, "SaveSettings: Failed to create initial backup")
                 End Try
             End If
+
+            ' Invalidate cache after successful save
+            SyncLock _settingsCacheLock
+                _cacheInvalidated = True
+                _settingsCache = Nothing
+            End SyncLock
+
         Catch ex As Exception
             Log.WriteException(ex, "SaveSettings: Critical error during settings save")
         End Try
@@ -390,6 +445,17 @@ Friend Module SettingsRoutines
         s.RainLimit.YearLimitInches = CSng(nudYear.Value)
         s.RainLimit.AllTimeLimitInches = CSng(nudAllTime.Value)
         SaveSettings(s)
+    End Sub
+
+    ''' <summary>
+    ''' Invalidate the settings cache, forcing reload from disk on next access
+    ''' </summary>
+    Friend Sub InvalidateSettingsCache()
+        SyncLock _settingsCacheLock
+            _cacheInvalidated = True
+            _settingsCache = Nothing
+            Log.Write("[SettingsRoutines] Settings cache invalidated")
+        End SyncLock
     End Sub
 
 End Module

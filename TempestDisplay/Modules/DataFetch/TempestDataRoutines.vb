@@ -1,3 +1,4 @@
+' Last Edit: January 15, 2026 (Added thread safety for LastTempestData, removed async sub, consolidated null checks, added cache invalidation)
 Imports System.Globalization
 
 Imports TempestDisplay.Common.Weather
@@ -9,14 +10,32 @@ Imports TempestDisplay.Common.Weather
 ''' </summary>
 Friend Module TempestDataRoutines
 
-    Friend Property LastTempestData As TempestModel
-
     Private Const KmToMilesFactor As Single = 0.621371F
     Private Const RainQueryMaxConcurrency As Integer = 3
     Private Const MillimetersToInches As Single = 1.0F / 25.4F
     Private Const InchesToMillimeters As Single = 25.4F
 
     Private ReadOnly ParseCulture As CultureInfo = CultureInfo.InvariantCulture
+
+    ' Thread-safe access to last Tempest data
+    Private ReadOnly _lastTempestDataLock As New Object()
+    Private _lastTempestData As TempestModel
+
+    ''' <summary>
+    ''' Thread-safe access to the last received Tempest data
+    ''' </summary>
+    Friend Property LastTempestData As TempestModel
+        Get
+            SyncLock _lastTempestDataLock
+                Return _lastTempestData
+            End SyncLock
+        End Get
+        Set(value As TempestModel)
+            SyncLock _lastTempestDataLock
+                _lastTempestData = value
+            End SyncLock
+        End Set
+    End Property
 
     ' Cache synchronization
     Private ReadOnly _rainCacheLock As New Object()
@@ -65,16 +84,24 @@ Friend Module TempestDataRoutines
     Friend Async Function WriteStationDataAsync(tNfo As TempestModel) As Task
         Try
             Log.Write("[WriteStationData] Starting station data write")
-            If tNfo Is Nothing Then Return
+
+            ' Guard clause - validate all preconditions up front
+            If tNfo Is Nothing OrElse tNfo.obs Is Nothing OrElse tNfo.obs.Length = 0 Then
+                Log.Write("[WriteStationData] No observation data available")
+                Return
+            End If
 
             Dim frm = Application.OpenForms.Cast(Of Form)().OfType(Of FrmMain)().FirstOrDefault()
-            If frm Is Nothing Then Return
-
-            Dim hasObs As Boolean = tNfo.obs IsNot Nothing AndAlso tNfo.obs.Length > 0
-            If Not hasObs Then Return
+            If frm Is Nothing Then
+                Log.Write("[WriteStationData] FrmMain not found in OpenForms")
+                Return
+            End If
 
             Dim first = tNfo.obs(0)
-            If first Is Nothing Then Return
+            If first Is Nothing Then
+                Log.Write("[WriteStationData] First observation is null")
+                Return
+            End If
 
             ' Update all UI sections
             UpdateTemperatureControls(frm, first)
@@ -317,11 +344,14 @@ Friend Module TempestDataRoutines
     End Function
 
     ''' <summary>
-    ''' Backward-compatible wrapper for older call sites.
-    ''' Prefer calling <see cref="WriteStationDataAsync"/> and awaiting it.
+    ''' Invalidate the rain data cache (call when MeteoBridge settings change)
     ''' </summary>
-    Friend Async Sub WriteStationData(tNfo As TempestModel)
-        Await WriteStationDataAsync(tNfo).ConfigureAwait(False)
+    Friend Sub InvalidateRainDataCache()
+        SyncLock _rainCacheLock
+            _rainDataCache = Nothing
+            _rainDataCacheTime = DateTime.MinValue
+            Log.Write("[TempestDataRoutines] Rain data cache invalidated")
+        End SyncLock
     End Sub
 
     Friend Structure RainAccumData

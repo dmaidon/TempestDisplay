@@ -1,3 +1,4 @@
+' Last Edit: January 15, 2026 (Fixed wind averaging algorithms, added data validation, optimized migrations, added indexes)
 Imports System.Data.SQLite
 Imports System.IO
 Imports System.Math
@@ -10,81 +11,128 @@ Friend Module HiLoDatabase
 
     Private ReadOnly DbFilePath As String = Path.Combine(Globals.DataDir, "HiLoWeather.sqlite")
 
+    ' Data validation constants
+    Private Const MinValidTempF As Double = -100.0
+    Private Const MaxValidTempF As Double = 150.0
+    Private Const MinValidWindMph As Double = 0.0
+    Private Const MaxValidWindMph As Double = 250.0
+    Private Const MinValidUvIndex As Double = 0.0
+    Private Const MaxValidUvIndex As Double = 20.0
+    Private Const MinValidSolarRadiation As Double = 0.0
+    Private Const MaxValidSolarRadiation As Double = 2000.0
+    Private Const MaxValidRainInches As Double = 100.0
+
+    ' Helper structure for wind averaging
+    Private Structure WindAverage
+        Public SumX As Double
+        Public SumY As Double
+        Public Count As Integer
+
+        Public Sub AddSample(directionDegrees As Double)
+            Dim rad As Double = (directionDegrees * PI) / 180.0
+            SumX += Cos(rad)
+            SumY += Sin(rad)
+            Count += 1
+        End Sub
+
+        Public ReadOnly Property AverageDegrees As Double
+            Get
+                If Count = 0 Then Return 0
+                Dim avgRad As Double = Atan2(SumY, SumX)
+                Dim avgDeg As Double = (avgRad * 180.0) / PI
+                If avgDeg < 0 Then avgDeg += 360.0
+                Return avgDeg
+            End Get
+        End Property
+    End Structure
+
+    ' Helper structure for running speed average
+    Private Structure SpeedAverage
+        Public Total As Double
+        Public Count As Integer
+
+        Public Sub AddSample(speed As Double)
+            Total += speed
+            Count += 1
+        End Sub
+
+        Public ReadOnly Property Average As Double
+            Get
+                If Count = 0 Then Return 0
+                Return Total / Count
+            End Get
+        End Property
+    End Structure
+
+    ''' <summary>
+    ''' Validates sensor data is within reasonable bounds to prevent garbage data.
+    ''' </summary>
+    Private Function ValidateValue(value As Double?, minVal As Double, maxVal As Double) As Double?
+        If Not value.HasValue Then Return Nothing
+        If value.Value < minVal OrElse value.Value > maxVal Then
+            Return Nothing ' Filter out invalid readings
+        End If
+        Return value
+    End Function
+
+    ''' <summary>
+    ''' Helper to check if a column exists in a table and add it if missing.
+    ''' </summary>
+    Private Sub AddColumnIfMissing(conn As SQLiteConnection, tableName As String, columnName As String, columnType As String)
+        Dim hasColumn As Boolean = False
+        Using cmd As New SQLiteCommand($"PRAGMA table_info({tableName})", conn)
+            Using reader = cmd.ExecuteReader()
+                While reader.Read()
+                    If reader("name").ToString() = columnName Then
+                        hasColumn = True
+                        Exit While
+                    End If
+                End While
+            End Using
+        End Using
+
+        If Not hasColumn Then
+            Using cmd As New SQLiteCommand($"ALTER TABLE {tableName} ADD COLUMN {columnName} {columnType}", conn)
+                cmd.ExecuteNonQuery()
+            End Using
+        End If
+    End Sub
+
     ''' <summary>
     ''' Migrate existing database to add new columns if they don't exist.
     ''' Safe to call on new or existing databases - checks for column existence first.
     ''' </summary>
     Private Sub MigrateDatabase(conn As SQLiteConnection)
         Try
-            ' Check if UVIndexHigh column exists in HiLoDaily
-            Dim hasUvInDaily As Boolean = False
-            Using cmd As New SQLiteCommand("PRAGMA table_info(HiLoDaily)", conn)
-                Using reader = cmd.ExecuteReader()
-                    While reader.Read()
-                        If reader("name").ToString() = "UVIndexHigh" Then
-                            hasUvInDaily = True
-                            Exit While
-                        End If
-                    End While
-                End Using
+            Log.Write("[HiLoDatabase] Checking for schema migrations...")
+
+            ' Migrate HiLoDaily table
+            AddColumnIfMissing(conn, "HiLoDaily", "UVIndexHigh", "REAL")
+            AddColumnIfMissing(conn, "HiLoDaily", "UVIndexHighTime", "TEXT")
+            AddColumnIfMissing(conn, "HiLoDaily", "SolarRadiationHigh", "REAL")
+            AddColumnIfMissing(conn, "HiLoDaily", "SolarRadiationHighTime", "TEXT")
+            ' Add proper wind averaging support (vector-based for direction, cumulative for speed)
+            AddColumnIfMissing(conn, "HiLoDaily", "WindDirSumX", "REAL")
+            AddColumnIfMissing(conn, "HiLoDaily", "WindDirSumY", "REAL")
+            AddColumnIfMissing(conn, "HiLoDaily", "WindDirSampleCount", "INTEGER")
+            AddColumnIfMissing(conn, "HiLoDaily", "WindSpeedTotal", "REAL")
+            AddColumnIfMissing(conn, "HiLoDaily", "WindSpeedCount", "INTEGER")
+
+            ' Migrate HiLoAllTime table
+            AddColumnIfMissing(conn, "HiLoAllTime", "UVIndexHigh", "REAL")
+            AddColumnIfMissing(conn, "HiLoAllTime", "UVIndexHighTime", "TEXT")
+            AddColumnIfMissing(conn, "HiLoAllTime", "SolarRadiationHigh", "REAL")
+            AddColumnIfMissing(conn, "HiLoAllTime", "SolarRadiationHighTime", "TEXT")
+
+            ' Add indexes for better query performance on timestamp lookups
+            Using cmd As New SQLiteCommand("CREATE INDEX IF NOT EXISTS IX_HiLoDaily_TempHighTime ON HiLoDaily(TempHighTime)", conn)
+                cmd.ExecuteNonQuery()
+            End Using
+            Using cmd As New SQLiteCommand("CREATE INDEX IF NOT EXISTS IX_HiLoDaily_LastUpdated ON HiLoDaily(LastUpdated)", conn)
+                cmd.ExecuteNonQuery()
             End Using
 
-            ' Add UV and Solar columns to HiLoDaily if they don't exist
-            If Not hasUvInDaily Then
-                Log.Write("[HiLoDatabase] Migrating HiLoDaily table to add UV and Solar Radiation columns")
-                Using cmd As New SQLiteCommand(conn)
-                    cmd.CommandText = "ALTER TABLE HiLoDaily ADD COLUMN UVIndexHigh REAL"
-                    cmd.ExecuteNonQuery()
-                End Using
-                Using cmd As New SQLiteCommand(conn)
-                    cmd.CommandText = "ALTER TABLE HiLoDaily ADD COLUMN UVIndexHighTime TEXT"
-                    cmd.ExecuteNonQuery()
-                End Using
-                Using cmd As New SQLiteCommand(conn)
-                    cmd.CommandText = "ALTER TABLE HiLoDaily ADD COLUMN SolarRadiationHigh REAL"
-                    cmd.ExecuteNonQuery()
-                End Using
-                Using cmd As New SQLiteCommand(conn)
-                    cmd.CommandText = "ALTER TABLE HiLoDaily ADD COLUMN SolarRadiationHighTime TEXT"
-                    cmd.ExecuteNonQuery()
-                End Using
-                Log.Write("[HiLoDatabase] HiLoDaily migration complete")
-            End If
-
-            ' Check if UVIndexHigh column exists in HiLoAllTime
-            Dim hasUvInAllTime As Boolean = False
-            Using cmd As New SQLiteCommand("PRAGMA table_info(HiLoAllTime)", conn)
-                Using reader = cmd.ExecuteReader()
-                    While reader.Read()
-                        If reader("name").ToString() = "UVIndexHigh" Then
-                            hasUvInAllTime = True
-                            Exit While
-                        End If
-                    End While
-                End Using
-            End Using
-
-            ' Add UV and Solar columns to HiLoAllTime if they don't exist
-            If Not hasUvInAllTime Then
-                Log.Write("[HiLoDatabase] Migrating HiLoAllTime table to add UV and Solar Radiation columns")
-                Using cmd As New SQLiteCommand(conn)
-                    cmd.CommandText = "ALTER TABLE HiLoAllTime ADD COLUMN UVIndexHigh REAL"
-                    cmd.ExecuteNonQuery()
-                End Using
-                Using cmd As New SQLiteCommand(conn)
-                    cmd.CommandText = "ALTER TABLE HiLoAllTime ADD COLUMN UVIndexHighTime TEXT"
-                    cmd.ExecuteNonQuery()
-                End Using
-                Using cmd As New SQLiteCommand(conn)
-                    cmd.CommandText = "ALTER TABLE HiLoAllTime ADD COLUMN SolarRadiationHigh REAL"
-                    cmd.ExecuteNonQuery()
-                End Using
-                Using cmd As New SQLiteCommand(conn)
-                    cmd.CommandText = "ALTER TABLE HiLoAllTime ADD COLUMN SolarRadiationHighTime TEXT"
-                    cmd.ExecuteNonQuery()
-                End Using
-                Log.Write("[HiLoDatabase] HiLoAllTime migration complete")
-            End If
+            Log.Write("[HiLoDatabase] Schema migration complete")
         Catch ex As Exception
             Log.WriteException(ex, "[HiLoDatabase] Error during database migration")
         End Try
@@ -133,10 +181,13 @@ Friend Module HiLoDatabase
                                                 "RainDay REAL, RainMonth REAL, RainYear REAL," &
                                                 "WindSpeedHigh REAL, WindSpeedHighTime TEXT," &
                                                 "WindSpeedAvg REAL, WindDirAvg REAL," &
+                                                "WindSpeedTotal REAL DEFAULT 0, WindSpeedCount INTEGER DEFAULT 0," &
+                                                "WindDirSumX REAL DEFAULT 0, WindDirSumY REAL DEFAULT 0, WindDirSampleCount INTEGER DEFAULT 0," &
                                                 "UVIndexHigh REAL, UVIndexHighTime TEXT," &
                                                 "SolarRadiationHigh REAL, SolarRadiationHighTime TEXT," &
                                                 "LastUpdated TEXT NOT NULL);" &
                                                 "CREATE UNIQUE INDEX IF NOT EXISTS IX_HiLoDaily_ObsDate ON HiLoDaily(ObsDate);" &
+                                                "CREATE INDEX IF NOT EXISTS IX_HiLoDaily_LastUpdated ON HiLoDaily(LastUpdated);" &
                                                 "CREATE TABLE IF NOT EXISTS HiLoAllTime (" &
                                                 "Id INTEGER PRIMARY KEY CHECK (Id = 1)," &
                                                 "TempHigh REAL, TempHighTime TEXT," &
@@ -148,7 +199,7 @@ Friend Module HiLoDatabase
                                                 "WindSpeedHigh REAL, WindSpeedHighTime TEXT," &
                                                 "UVIndexHigh REAL, UVIndexHighTime TEXT," &
                                                 "SolarRadiationHigh REAL, SolarRadiationHighTime TEXT," &
-                                                "WindDirSumX REAL, WindDirSumY REAL, WindDirSampleCount INTEGER," &
+                                                "WindDirSumX REAL DEFAULT 0, WindDirSumY REAL DEFAULT 0, WindDirSampleCount INTEGER DEFAULT 0," &
                                                 "LastUpdated TEXT);" &
                                                 "INSERT OR IGNORE INTO HiLoAllTime (Id, WindDirSumX, WindDirSumY, WindDirSampleCount) VALUES (1, 0.0, 0.0, 0);"
 
@@ -183,6 +234,17 @@ Friend Module HiLoDatabase
         solarRadiation As Double?)
 
         Try
+            ' Validate all input values to prevent garbage data
+            tempF = ValidateValue(tempF, MinValidTempF, MaxValidTempF)
+            feelsLikeF = ValidateValue(feelsLikeF, MinValidTempF, MaxValidTempF)
+            heatIndexF = ValidateValue(heatIndexF, MinValidTempF, MaxValidTempF)
+            windChillF = ValidateValue(windChillF, MinValidTempF, MaxValidTempF)
+            rainDayIn = ValidateValue(rainDayIn, 0, MaxValidRainInches)
+            rainMonthIn = ValidateValue(rainMonthIn, 0, MaxValidRainInches)
+            rainYearIn = ValidateValue(rainYearIn, 0, MaxValidRainInches * 365)
+            windSpeedMph = ValidateValue(windSpeedMph, MinValidWindMph, MaxValidWindMph)
+            uvIndex = ValidateValue(uvIndex, MinValidUvIndex, MaxValidUvIndex)
+            solarRadiation = ValidateValue(solarRadiation, MinValidSolarRadiation, MaxValidSolarRadiation)
             Dim obsDate As String = obsTimeLocal.ToString("yyyy-MM-dd")
             Dim nowIso As String = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
 
@@ -215,10 +277,19 @@ Friend Module HiLoDatabase
                 Dim rainMonth As Double? = GetNullableDouble(existing, "RainMonth")
                 Dim rainYear As Double? = GetNullableDouble(existing, "RainYear")
                 Dim windHigh As Double? = GetNullableDouble(existing, "WindSpeedHigh")
-                Dim windDirAvg As Double? = GetNullableDouble(existing, "WindDirAvg")
-                Dim windAvg As Double? = GetNullableDouble(existing, "WindSpeedAvg")
                 Dim uvHigh As Double? = GetNullableDouble(existing, "UVIndexHigh")
                 Dim solarHigh As Double? = GetNullableDouble(existing, "SolarRadiationHigh")
+
+                ' Load wind averaging accumulators (proper vector-based for direction, cumulative for speed)
+                Dim windDirAccum As New WindAverage With {
+                    .SumX = GetNullableDouble(existing, "WindDirSumX").GetValueOrDefault(0.0),
+                    .SumY = GetNullableDouble(existing, "WindDirSumY").GetValueOrDefault(0.0),
+                    .Count = CInt(GetNullableDouble(existing, "WindDirSampleCount").GetValueOrDefault(0.0))
+                }
+                Dim windSpeedAccum As New SpeedAverage With {
+                    .Total = GetNullableDouble(existing, "WindSpeedTotal").GetValueOrDefault(0.0),
+                    .Count = CInt(GetNullableDouble(existing, "WindSpeedCount").GetValueOrDefault(0.0))
+                }
 
                 Dim obsTimeStr As String = obsTimeLocal.ToString("yyyy-MM-dd HH:mm:ss")
 
@@ -275,21 +346,14 @@ Friend Module HiLoDatabase
                     End If
                 End If
 
-                ' Very simple running averages for wind speed and direction (daily)
-                If windSpeedMph.HasValue Then
-                    If Not windAvg.HasValue Then
-                        windAvg = windSpeedMph
-                    Else
-                        windAvg = (windAvg.Value + windSpeedMph.Value) / 2.0
-                    End If
+                ' Proper wind averaging: vector-based for direction, arithmetic for speed
+                If windSpeedMph.HasValue AndAlso windSpeedMph.Value > 0 Then
+                    windSpeedAccum.AddSample(windSpeedMph.Value)
                 End If
 
-                If windDirDeg.HasValue Then
-                    If Not windDirAvg.HasValue Then
-                        windDirAvg = windDirDeg
-                    Else
-                        windDirAvg = (windDirAvg.Value + windDirDeg.Value) / 2.0
-                    End If
+                If windDirDeg.HasValue AndAlso windSpeedMph.HasValue AndAlso windSpeedMph.Value > 0 Then
+                    ' Only accumulate direction when wind is actually blowing (speed > 0)
+                    windDirAccum.AddSample(windDirDeg.Value)
                 End If
 
                 ' UV Index high (daily)
@@ -315,11 +379,12 @@ Friend Module HiLoDatabase
                                           "FeelsLikeHigh, FeelsLikeHighTime, FeelsLikeLow, FeelsLikeLowTime, " &
                                           "HeatIndexHigh, HeatIndexHighTime, WindChillLow, WindChillLowTime, " &
                                           "RainDay, RainMonth, RainYear, WindSpeedHigh, WindSpeedHighTime, " &
-                                          "WindSpeedAvg, WindDirAvg, UVIndexHigh, UVIndexHighTime, " &
-                                          "SolarRadiationHigh, SolarRadiationHighTime, LastUpdated) " &
+                                          "WindSpeedAvg, WindDirAvg, WindSpeedTotal, WindSpeedCount, " &
+                                          "WindDirSumX, WindDirSumY, WindDirSampleCount, " &
+                                          "UVIndexHigh, UVIndexHighTime, SolarRadiationHigh, SolarRadiationHighTime, LastUpdated) " &
                                           "VALUES (@date, @th, @tht, @tl, @tlt, @flh, @flht, @fll, @fllt, " &
                                           "@hih, @hiht, @wcl, @wclt, @rd, @rm, @ry, @wsh, @wsht, @wsa, @wda, " &
-                                          "@uvh, @uvht, @solh, @solht, @lu)"
+                                          "@wst, @wsc, @wdx, @wdy, @wdsc, @uvh, @uvht, @solh, @solht, @lu)"
                     Else
                         cmd.CommandText = "UPDATE HiLoDaily SET " &
                                           "TempHigh=@th, TempHighTime=@tht, " &
@@ -331,6 +396,8 @@ Friend Module HiLoDatabase
                                           "RainDay=@rd, RainMonth=@rm, RainYear=@ry, " &
                                           "WindSpeedHigh=@wsh, WindSpeedHighTime=@wsht, " &
                                           "WindSpeedAvg=@wsa, WindDirAvg=@wda, " &
+                                          "WindSpeedTotal=@wst, WindSpeedCount=@wsc, " &
+                                          "WindDirSumX=@wdx, WindDirSumY=@wdy, WindDirSampleCount=@wdsc, " &
                                           "UVIndexHigh=@uvh, UVIndexHighTime=@uvht, " &
                                           "SolarRadiationHigh=@solh, SolarRadiationHighTime=@solht, " &
                                           "LastUpdated=@lu WHERE ObsDate=@date"
@@ -354,8 +421,13 @@ Friend Module HiLoDatabase
                     cmd.Parameters.AddWithValue("@ry", CType(If(rainYear, CType(DBNull.Value, Object)), Object))
                     cmd.Parameters.AddWithValue("@wsh", CType(If(windHigh, CType(DBNull.Value, Object)), Object))
                     cmd.Parameters.AddWithValue("@wsht", CType(If(existing.GetValueOrDefault("WindSpeedHighTime"), CType(DBNull.Value, Object)), Object))
-                    cmd.Parameters.AddWithValue("@wsa", CType(If(windAvg, CType(DBNull.Value, Object)), Object))
-                    cmd.Parameters.AddWithValue("@wda", CType(If(windDirAvg, CType(DBNull.Value, Object)), Object))
+                    cmd.Parameters.AddWithValue("@wsa", windSpeedAccum.Average)
+                    cmd.Parameters.AddWithValue("@wda", windDirAccum.AverageDegrees)
+                    cmd.Parameters.AddWithValue("@wst", windSpeedAccum.Total)
+                    cmd.Parameters.AddWithValue("@wsc", windSpeedAccum.Count)
+                    cmd.Parameters.AddWithValue("@wdx", windDirAccum.SumX)
+                    cmd.Parameters.AddWithValue("@wdy", windDirAccum.SumY)
+                    cmd.Parameters.AddWithValue("@wdsc", windDirAccum.Count)
                     cmd.Parameters.AddWithValue("@uvh", CType(If(uvHigh, CType(DBNull.Value, Object)), Object))
                     cmd.Parameters.AddWithValue("@uvht", CType(If(existing.GetValueOrDefault("UVIndexHighTime"), CType(DBNull.Value, Object)), Object))
                     cmd.Parameters.AddWithValue("@solh", CType(If(solarHigh, CType(DBNull.Value, Object)), Object))

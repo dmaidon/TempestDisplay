@@ -9,7 +9,15 @@
       "Bash(find:*)",
       "Bash(ls:*)",
       "Bash(cmd /c \"dir %LocalAppData%\\\\Microsoft\\\\VisualStudio /b /ad 2>nul\")",
-      "Bash(echo:*)"
+      "Bash(echo:*)",
+      "Bash(\"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\" TempestDisplay.sln /t:Build /p:Configuration=Debug /v:m)",
+      "Bash(\"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\" TempestDisplay.sln /t:Build /p:Configuration=Debug /verbosity:minimal)",
+      "Bash(\"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\" TempestDisplay.sln)",
+      "Bash(\"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\" TempestDisplayTempestDisplay.vbproj)",
+      "Bash(\"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\" \"C:\\\\VB18\\\\TempestDisplay\\\\TempestDisplay\\\\TempestDisplay.vbproj\")",
+      "Bash(findstr:*)",
+      "Bash(test:*)",
+      "Bash(\"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\18\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\" \"C:\\\\VB18\\\\TempestDisplay\\\\TempestDisplay\\\\TempestDisplay.vbproj\")"
     ],
     "deny": [],
     "ask": []
