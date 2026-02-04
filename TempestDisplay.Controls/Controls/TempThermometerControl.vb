@@ -23,6 +23,17 @@ Public Class TempThermometerControl
     ' New: choose which unit to show in the bulb text readout
     Private _displayUnit As TemperatureUnit = TemperatureUnit.Fahrenheit
 
+    ' Property change threshold to avoid excessive repaints for tiny changes
+    Private Const TEMP_CHANGE_THRESHOLD As Single = 0.1F
+
+    ' Cached fonts for performance (avoid creating on every paint)
+    Private _cachedLabelFont As Font
+    Private _cachedScaleFont As Font
+    Private _lastFontSize As Single = 0
+
+    ' Dispose tracking
+    Private _disposed As Boolean = False
+
     <Browsable(True)>
     <Category("Data")>
     <DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)>
@@ -31,6 +42,8 @@ Public Class TempThermometerControl
             Return _tempF
         End Get
         Set(value As Single)
+            ' Only invalidate if change exceeds threshold
+            If Math.Abs(_tempF - value) < TEMP_CHANGE_THRESHOLD Then Return
             _tempF = value
             _tempC = (value - 32.0F) * 5.0F / 9.0F
             Invalidate()
@@ -45,8 +58,11 @@ Public Class TempThermometerControl
             Return _tempC
         End Get
         Set(value As Single)
+            ' Only invalidate if change exceeds threshold
+            Dim newTempF = value * 9.0F / 5.0F + 32.0F
+            If Math.Abs(_tempF - newTempF) < TEMP_CHANGE_THRESHOLD Then Return
             _tempC = value
-            _tempF = value * 9.0F / 5.0F + 32.0F
+            _tempF = newTempF
             Invalidate()
         End Set
     End Property
@@ -93,7 +109,7 @@ Public Class TempThermometerControl
     <Browsable(True)>
     <Category("Appearance")>
     <DefaultValue(True)>
-    <Description("Show the 32째F freezing point marker")>
+    <Description("Show the 32캟 freezing point marker")>
     Public Property ShowFreezeMarker As Boolean
         Get
             Return _showFreezeMarker
@@ -137,6 +153,38 @@ Public Class TempThermometerControl
         DoubleBuffered = True
         SetStyle(ControlStyles.UserPaint Or ControlStyles.AllPaintingInWmPaint Or ControlStyles.OptimizedDoubleBuffer, True)
         Me.MinimumSize = New Size(80, 150)
+        UpdateCachedFonts()
+    End Sub
+
+    ''' <summary>
+    ''' Update cached fonts when control font changes
+    ''' </summary>
+    Private Sub UpdateCachedFonts()
+        _cachedLabelFont?.Dispose()
+        _cachedScaleFont?.Dispose()
+
+        Dim baseFont As Font = If(Me.Font, SystemFonts.DefaultFont)
+        _cachedLabelFont = New Font("Segoe UI", 9.0F, FontStyle.Bold)
+        _cachedScaleFont = New Font("Arial", 7.5F, FontStyle.Regular)
+        _lastFontSize = baseFont.Size
+    End Sub
+
+    Protected Overrides Sub OnFontChanged(e As EventArgs)
+        MyBase.OnFontChanged(e)
+        UpdateCachedFonts()
+        Invalidate()
+    End Sub
+
+    Protected Overrides Sub Dispose(disposing As Boolean)
+        If Not _disposed Then
+            If disposing Then
+                ' Dispose managed resources (cached fonts)
+                _cachedLabelFont?.Dispose()
+                _cachedScaleFont?.Dispose()
+            End If
+            _disposed = True
+        End If
+        MyBase.Dispose(disposing)
     End Sub
 
     ''' <summary>
@@ -150,7 +198,7 @@ Public Class TempThermometerControl
     ''' Returns a color based on temperature value for the mercury column
     ''' </summary>
     Private Shared Function GetTemperatureColor(tempF As Single) As Color
-        ' Cold: Blue tones (below 32째F)
+        ' Cold: Blue tones (below 32캟)
         If tempF < 32.0F Then
             Return Color.FromArgb(70, 130, 220)
         ElseIf tempF < 50.0F Then
@@ -195,6 +243,11 @@ Public Class TempThermometerControl
         g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit
         g.PixelOffsetMode = PixelOffsetMode.HighQuality
         g.CompositingQuality = CompositingQuality.HighQuality
+
+        ' Recreate fonts if control font changed
+        If Me.Font IsNot Nothing AndAlso Me.Font.Size <> _lastFontSize Then
+            UpdateCachedFonts()
+        End If
 
         Dim w As Integer = Me.ClientSize.Width
         Dim h As Integer = Me.ClientSize.Height
@@ -248,20 +301,19 @@ Public Class TempThermometerControl
         DrawBulbTextReadout(g, centerX, bulbTextY, _tempF, _tempC, _displayUnit)
     End Sub
 
-    Private Shared Sub DrawLabel(g As Graphics, label As String, cx As Single, cy As Single)
-        Using font As New Font("Segoe UI", 9.0F, FontStyle.Bold)
-            Using brush As New SolidBrush(Color.FromArgb(80, 80, 80))
-                Using fmt As New StringFormat()
-                    fmt.Alignment = StringAlignment.Center
-                    fmt.LineAlignment = StringAlignment.Center
+    Private Sub DrawLabel(g As Graphics, label As String, cx As Single, cy As Single)
+        ' Use cached font instead of creating new one
+        Using brush As New SolidBrush(Color.FromArgb(80, 80, 80))
+            Using fmt As New StringFormat()
+                fmt.Alignment = StringAlignment.Center
+                fmt.LineAlignment = StringAlignment.Center
 
-                    ' Shadow
-                    Using shadowBrush As New SolidBrush(Color.FromArgb(30, 0, 0, 0))
-                        g.DrawString(label, font, shadowBrush, cx + 1, cy + 1, fmt)
-                    End Using
-
-                    g.DrawString(label, font, brush, cx, cy, fmt)
+                ' Shadow
+                Using shadowBrush As New SolidBrush(Color.FromArgb(30, 0, 0, 0))
+                    g.DrawString(label, _cachedLabelFont, shadowBrush, cx + 1, cy + 1, fmt)
                 End Using
+
+                g.DrawString(label, _cachedLabelFont, brush, cx, cy, fmt)
             End Using
         End Using
     End Sub
@@ -283,78 +335,77 @@ Public Class TempThermometerControl
     End Sub
 
     Private Sub DrawScale(g As Graphics, cx As Single, tubeTop As Single, tubeHeight As Single, tubeWidth As Single, scaleWidth As Single, minVal As Single, maxVal As Single)
-        Using font As New Font("Arial", 7.5F, FontStyle.Regular)
-            Using brush As New SolidBrush(Color.FromArgb(60, 60, 60))
-                Using fmt As New StringFormat()
-                    fmt.Alignment = StringAlignment.Near
-                    fmt.LineAlignment = StringAlignment.Center
+        ' Use cached font instead of creating new one
+        Using brush As New SolidBrush(Color.FromArgb(60, 60, 60))
+            Using fmt As New StringFormat()
+                fmt.Alignment = StringAlignment.Near
+                fmt.LineAlignment = StringAlignment.Center
 
-                    ' Determine step size for scale markers
-                    Dim tempRange As Single = maxVal - minVal
-                    Dim majorStep As Integer = If(tempRange > 80, 20, If(tempRange > 40, 10, 5))
+                ' Determine step size for scale markers
+                Dim tempRange As Single = maxVal - minVal
+                Dim majorStep As Integer = If(tempRange > 80, 20, If(tempRange > 40, 10, 5))
 
-                    ' Draw Fahrenheit scale on left
-                    Dim tickLeft As Single = cx - tubeWidth / 2.0F - 5
-                    Dim labelLeft As Single = tickLeft - scaleWidth
+                ' Draw Fahrenheit scale on left
+                Dim tickLeft As Single = cx - tubeWidth / 2.0F - 5
+                Dim labelLeft As Single = tickLeft - scaleWidth
 
-                    Dim steps As Integer = CInt(Math.Floor((maxVal - minVal) / majorStep))
+                Dim steps As Integer = CInt(Math.Floor((maxVal - minVal) / majorStep))
+                For i As Integer = 0 To steps
+                    Dim temp As Single = minVal + i * majorStep
+                    Dim pos As Single = ValueToPosition(temp, minVal, maxVal)
+                    Dim y As Single = tubeTop + tubeHeight * (1.0F - pos)
+
+                    ' Draw tick mark
+                    Using tickPen As New Pen(Color.FromArgb(80, 80, 80), 1.5F)
+                        g.DrawLine(tickPen, tickLeft, y, tickLeft - 5, y)
+                    End Using
+
+                    ' Draw temperature label
+                    Dim labelText As String = temp.ToString("0")
+                    Using shadowBrush As New SolidBrush(Color.FromArgb(20, 0, 0, 0))
+                        g.DrawString(labelText, _cachedScaleFont, shadowBrush, labelLeft + 1, y + 1, fmt)
+                    End Using
+                    g.DrawString(labelText, _cachedScaleFont, brush, labelLeft, y, fmt)
+                Next
+
+                ' Draw Celsius scale on right if enabled
+                If _showDualScale Then
+                    fmt.Alignment = StringAlignment.Far
+                    Dim tickRight As Single = cx + tubeWidth / 2.0F + 5
+                    Dim labelRight As Single = tickRight + scaleWidth
+
                     For i As Integer = 0 To steps
-                        Dim temp As Single = minVal + i * majorStep
-                        Dim pos As Single = ValueToPosition(temp, minVal, maxVal)
+                        Dim tempF As Single = minVal + i * majorStep
+                        Dim tempC As Single = (tempF - 32.0F) * 5.0F / 9.0F
+                        Dim pos As Single = ValueToPosition(tempF, minVal, maxVal)
                         Dim y As Single = tubeTop + tubeHeight * (1.0F - pos)
 
                         ' Draw tick mark
-                        Using tickPen As New Pen(Color.FromArgb(80, 80, 80), 1.5F)
-                            g.DrawLine(tickPen, tickLeft, y, tickLeft - 5, y)
+                        Using tickPen As New Pen(Color.FromArgb(120, 60, 60), 1.5F)
+                            g.DrawLine(tickPen, tickRight, y, tickRight + 5, y)
                         End Using
 
                         ' Draw temperature label
-                        Dim labelText As String = temp.ToString("0")
+                        Dim labelText As String = tempC.ToString("0")
                         Using shadowBrush As New SolidBrush(Color.FromArgb(20, 0, 0, 0))
-                            g.DrawString(labelText, font, shadowBrush, labelLeft + 1, y + 1, fmt)
+                            g.DrawString(labelText, _cachedScaleFont, shadowBrush, labelRight + 1, y + 1, fmt)
                         End Using
-                        g.DrawString(labelText, font, brush, labelLeft, y, fmt)
+                        Using cBrush As New SolidBrush(Color.FromArgb(140, 60, 60))
+                            g.DrawString(labelText, _cachedScaleFont, cBrush, labelRight, y, fmt)
+                        End Using
                     Next
+                End If
 
-                    ' Draw Celsius scale on right if enabled
-                    If _showDualScale Then
-                        fmt.Alignment = StringAlignment.Far
-                        Dim tickRight As Single = cx + tubeWidth / 2.0F + 5
-                        Dim labelRight As Single = tickRight + scaleWidth
+                ' Draw freezing point marker if enabled
+                If _showFreezeMarker AndAlso 32.0F >= minVal AndAlso 32.0F <= maxVal Then
+                    Dim freezePos As Single = ValueToPosition(32.0F, minVal, maxVal)
+                    Dim freezeY As Single = tubeTop + tubeHeight * (1.0F - freezePos)
 
-                        For i As Integer = 0 To steps
-                            Dim tempF As Single = minVal + i * majorStep
-                            Dim tempC As Single = (tempF - 32.0F) * 5.0F / 9.0F
-                            Dim pos As Single = ValueToPosition(tempF, minVal, maxVal)
-                            Dim y As Single = tubeTop + tubeHeight * (1.0F - pos)
-
-                            ' Draw tick mark
-                            Using tickPen As New Pen(Color.FromArgb(120, 60, 60), 1.5F)
-                                g.DrawLine(tickPen, tickRight, y, tickRight + 5, y)
-                            End Using
-
-                            ' Draw temperature label
-                            Dim labelText As String = tempC.ToString("0")
-                            Using shadowBrush As New SolidBrush(Color.FromArgb(20, 0, 0, 0))
-                                g.DrawString(labelText, font, shadowBrush, labelRight + 1, y + 1, fmt)
-                            End Using
-                            Using cBrush As New SolidBrush(Color.FromArgb(140, 60, 60))
-                                g.DrawString(labelText, font, cBrush, labelRight, y, fmt)
-                            End Using
-                        Next
-                    End If
-
-                    ' Draw freezing point marker if enabled
-                    If _showFreezeMarker AndAlso 32.0F >= minVal AndAlso 32.0F <= maxVal Then
-                        Dim freezePos As Single = ValueToPosition(32.0F, minVal, maxVal)
-                        Dim freezeY As Single = tubeTop + tubeHeight * (1.0F - freezePos)
-
-                        Using freezePen As New Pen(Color.FromArgb(180, 60, 60), 2.0F)
-                            freezePen.DashStyle = DashStyle.Dash
-                            g.DrawLine(freezePen, tickLeft - 8, freezeY, cx + tubeWidth / 2.0F + 8, freezeY)
-                        End Using
-                    End If
-                End Using
+                    Using freezePen As New Pen(Color.FromArgb(180, 60, 60), 2.0F)
+                        freezePen.DashStyle = DashStyle.Dash
+                        g.DrawLine(freezePen, tickLeft - 8, freezeY, cx + tubeWidth / 2.0F + 8, freezeY)
+                    End Using
+                End If
             End Using
         End Using
     End Sub
@@ -498,10 +549,10 @@ Public Class TempThermometerControl
 
             Using fontVal As New Font("Segoe UI", 9.0F, FontStyle.Bold)
                 Using shadowBrush As New SolidBrush(Color.FromArgb(40, 0, 0, 0))
-                    g.DrawString(String.Format("{0:0.#}째{1}", displayValue, unitSuffix), fontVal, shadowBrush, cx + 1, cy + 1, fmt)
+                    g.DrawString(String.Format("{0:0.#}�{1}", displayValue, unitSuffix), fontVal, shadowBrush, cx + 1, cy + 1, fmt)
                 End Using
                 Using valueBrush As New SolidBrush(textColor)
-                    g.DrawString(String.Format("{0:0.#}째{1}", displayValue, unitSuffix), fontVal, valueBrush, cx, cy, fmt)
+                    g.DrawString(String.Format("{0:0.#}�{1}", displayValue, unitSuffix), fontVal, valueBrush, cx, cy, fmt)
                 End Using
             End Using
         End Using

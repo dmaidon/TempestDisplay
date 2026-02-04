@@ -10,17 +10,77 @@ Public Class SolarUvCombinedMeter
 
     ' Data
     Private _uvIndex As Single
-
     Private _uvPeak As Single
     Private _solarRadiation As Single
     Private _maxRadiation As Single = 1200.0F
     Private _showPeak As Boolean = True
+
+    ' Property change thresholds to avoid excessive repaints
+    Private Const UV_CHANGE_THRESHOLD As Single = 0.1F
+    Private Const SOLAR_CHANGE_THRESHOLD As Single = 5.0F
+
+    ' Cached fonts for performance (avoid creating on every paint)
+    Private _cachedTitleFont As Font
+    Private _cachedValueFont As Font
+    Private _cachedSmallFont As Font
+    Private _lastFontSize As Single = 0
+
+    ' Dispose tracking
+    Private _disposed As Boolean = False
+
+    ' Static readonly UV segments to avoid allocation on every paint
+    Private Shared ReadOnly UvSegments As (Color As Color, Label As String, Max As Single)() = {
+        (Color.FromArgb(167, 215, 150), "Low", 2.0F),
+        (Color.FromArgb(230, 207, 140), "Mod", 5.0F),
+        (Color.FromArgb(233, 170, 120), "High", 7.0F),
+        (Color.FromArgb(220, 130, 170), "V.High", 10.0F),
+        (Color.FromArgb(210, 150, 210), "Ext", 12.0F)
+    }
 
     Public Sub New()
         DoubleBuffered = True
         SetStyle(ControlStyles.UserPaint Or ControlStyles.AllPaintingInWmPaint Or ControlStyles.OptimizedDoubleBuffer, True)
         Me.MinimumSize = New Size(220, 160)
         Me.BackColor = Color.FromArgb(245, 235, 220)
+        UpdateCachedFonts()
+    End Sub
+
+    ''' <summary>
+    ''' Update cached fonts when control font changes
+    ''' </summary>
+    Private Sub UpdateCachedFonts()
+        _cachedTitleFont?.Dispose()
+        _cachedValueFont?.Dispose()
+        _cachedSmallFont?.Dispose()
+
+        Dim baseFont As Font = If(Me.Font, SystemFonts.DefaultFont)
+        Dim titleSize As Single = Math.Min(Math.Max(baseFont.Size * 0.95F, 8.0F), 11.0F)
+        Dim valueSize As Single = Math.Min(Math.Max(baseFont.Size * 0.9F, 7.5F), 10.0F)
+        Dim smallSize As Single = Math.Min(Math.Max(baseFont.Size * 0.85F, 7.0F), 9.0F)
+
+        _cachedTitleFont = New Font(baseFont.FontFamily, titleSize, FontStyle.Bold)
+        _cachedValueFont = New Font(baseFont.FontFamily, valueSize, FontStyle.Bold)
+        _cachedSmallFont = New Font(baseFont.FontFamily, smallSize, FontStyle.Regular)
+        _lastFontSize = baseFont.Size
+    End Sub
+
+    Protected Overrides Sub OnFontChanged(e As EventArgs)
+        MyBase.OnFontChanged(e)
+        UpdateCachedFonts()
+        Invalidate()
+    End Sub
+
+    Protected Overrides Sub Dispose(disposing As Boolean)
+        If Not _disposed Then
+            If disposing Then
+                ' Dispose managed resources (cached fonts)
+                _cachedTitleFont?.Dispose()
+                _cachedValueFont?.Dispose()
+                _cachedSmallFont?.Dispose()
+            End If
+            _disposed = True
+        End If
+        MyBase.Dispose(disposing)
     End Sub
 
     ' Properties
@@ -33,7 +93,10 @@ Public Class SolarUvCombinedMeter
             Return _uvIndex
         End Get
         Set(value As Single)
-            _uvIndex = Math.Max(0.0F, Math.Min(12.0F, value))
+            Dim clampedValue = Math.Max(0.0F, Math.Min(12.0F, value))
+            ' Only invalidate if change exceeds threshold
+            If Math.Abs(_uvIndex - clampedValue) < UV_CHANGE_THRESHOLD Then Return
+            _uvIndex = clampedValue
             If value > _uvPeak Then _uvPeak = value
             Invalidate()
         End Set
@@ -48,7 +111,10 @@ Public Class SolarUvCombinedMeter
             Return _uvPeak
         End Get
         Set(value As Single)
-            _uvPeak = Math.Max(0.0F, Math.Min(12.0F, value))
+            Dim clampedValue = Math.Max(0.0F, Math.Min(12.0F, value))
+            ' Only invalidate if change exceeds threshold
+            If Math.Abs(_uvPeak - clampedValue) < UV_CHANGE_THRESHOLD Then Return
+            _uvPeak = clampedValue
             Invalidate()
         End Set
     End Property
@@ -62,7 +128,10 @@ Public Class SolarUvCombinedMeter
             Return _solarRadiation
         End Get
         Set(value As Single)
-            _solarRadiation = Math.Max(0.0F, value)
+            Dim clampedValue = Math.Max(0.0F, value)
+            ' Only invalidate if change exceeds threshold
+            If Math.Abs(_solarRadiation - clampedValue) < SOLAR_CHANGE_THRESHOLD Then Return
+            _solarRadiation = clampedValue
             Invalidate()
         End Set
     End Property
@@ -106,88 +175,78 @@ Public Class SolarUvCombinedMeter
         Dim h = ClientSize.Height
         If w <= 0 OrElse h <= 0 Then Return
 
-        ' Use control Font as base and clamp sizes to keep meter small within TableLayoutPanel cells
-        Dim baseFont As Font = If(Me.Font, New Font("Segoe UI", 9.0F, FontStyle.Regular))
-        Dim titleSize As Single = Math.Min(Math.Max(baseFont.Size * 0.95F, 8.0F), 11.0F)
-        Dim valueSize As Single = Math.Min(Math.Max(baseFont.Size * 0.9F, 7.5F), 10.0F)
-        Dim smallSize As Single = Math.Min(Math.Max(baseFont.Size * 0.85F, 7.0F), 9.0F)
+        ' Recreate fonts if control font changed
+        If Me.Font IsNot Nothing AndAlso Me.Font.Size <> _lastFontSize Then
+            UpdateCachedFonts()
+        End If
 
-        Using titleFont As New Font(baseFont.FontFamily, titleSize, FontStyle.Bold),
-              valueFont As New Font(baseFont.FontFamily, valueSize, FontStyle.Bold),
-              smallFont As New Font(baseFont.FontFamily, smallSize, FontStyle.Regular)
+        ' Use cached fonts instead of creating new ones every paint
+        Dim sidePad As Integer = CInt(Math.Max(8, w * 0.04))
+        Dim topPad As Integer = CInt(Math.Max(8, h * 0.05))
+        Dim midPad As Integer = CInt(Math.Max(8, h * 0.05))
+        Dim bottomPad As Integer = CInt(Math.Max(6, h * 0.04))
 
-            ' Tight paddings so the control fits in one cell neatly
-            Dim sidePad As Integer = CInt(Math.Max(8, w * 0.04))
-            Dim topPad As Integer = CInt(Math.Max(8, h * 0.05))
-            Dim midPad As Integer = CInt(Math.Max(8, h * 0.05))
-            Dim bottomPad As Integer = CInt(Math.Max(6, h * 0.04))
+        Dim availH = h - topPad - bottomPad - midPad
+        Dim uvH = Math.Max(CInt(availH * 0.5), 80)
+        Dim solH = Math.Max(availH - uvH, 70)
+        Dim contentW = w - sidePad * 2
 
-            Dim availH = h - topPad - bottomPad - midPad
-            ' Favor more space for UV where text appears
-            Dim uvH = Math.Max(CInt(availH * 0.5), 80)
-            Dim solH = Math.Max(availH - uvH, 70)
-            Dim contentW = w - sidePad * 2
+        Dim uvRect As New Rectangle(sidePad, topPad, contentW, uvH)
+        Dim solRect As New Rectangle(sidePad, topPad + uvH + midPad, contentW, solH)
 
-            Dim uvRect As New Rectangle(sidePad, topPad, contentW, uvH)
-            Dim solRect As New Rectangle(sidePad, topPad + uvH + midPad, contentW, solH)
-
-            DrawUV(g, uvRect, titleFont, valueFont, smallFont)
-            DrawSolar(g, solRect, titleFont, valueFont, smallFont)
-        End Using
+        DrawUV(g, uvRect)
+        DrawSolar(g, solRect)
     End Sub
 
-    Private Sub DrawUV(g As Graphics, rect As Rectangle, titleFont As Font, valueFont As Font, smallFont As Font)
-        ' Title
+    Private Sub DrawUV(g As Graphics, rect As Rectangle)
+        ' Title - use cached font
         Using titleBrush As New SolidBrush(Color.FromArgb(60, 60, 60))
-            g.DrawString("UV Index", titleFont, titleBrush, rect.X, rect.Y)
+            g.DrawString("UV Index", _cachedTitleFont, titleBrush, rect.X, rect.Y)
         End Using
 
         ' Bar area
-        Dim barTop As Integer = rect.Y + CInt(titleFont.Height * 1.0)
-        Dim barHeight As Integer = Math.Max(CInt(rect.Height * 0.32), CInt(smallFont.Size * 2.8F))
+        Dim barTop As Integer = rect.Y + CInt(_cachedTitleFont.Height * 1.0)
+        Dim barHeight As Integer = Math.Max(CInt(rect.Height * 0.32), CInt(_cachedSmallFont.Size * 2.8F))
         Dim barRect As New Rectangle(rect.X + CInt(rect.Width * 0.1), barTop, rect.Width - CInt(rect.Width * 0.12), barHeight)
 
-        ' Segments across 0..12
-        Dim segments As (Color As Color, Label As String, Max As Single)() = {
-            (Color.FromArgb(167, 215, 150), "Low", 2.0F),
-            (Color.FromArgb(230, 207, 140), "Mod", 5.0F),
-            (Color.FromArgb(233, 170, 120), "High", 7.0F),
-            (Color.FromArgb(220, 130, 170), "V.High", 10.0F),
-            (Color.FromArgb(210, 150, 210), "Ext", 12.0F)
-        }
-
+        ' Use static readonly segments instead of creating array every paint
         Dim x0 = barRect.Left
         Dim total = 12.0F
         Dim currentMax As Single = 0.0F
-        For i = 0 To segments.Length - 1
+        For i = 0 To UvSegments.Length - 1
+            Dim segment = UvSegments(i)
             Dim minVal As Single = currentMax
-            Dim maxVal As Single = segments(i).Max
+            Dim maxVal As Single = segment.Max
             Dim segW As Integer = CInt((maxVal - minVal) / total * barRect.Width)
             Dim segRect As New Rectangle(x0, barRect.Top, segW, barRect.Height)
-            Using b As New SolidBrush(segments(i).Color)
+            Using b As New SolidBrush(segment.Color)
                 Using path As New GraphicsPath()
                     path.AddRoundedRect(segRect, CInt(barRect.Height / 2))
                     g.FillPath(b, path)
                 End Using
             End Using
 
-            ' Smaller labels
+            ' Smaller labels - use cached font
             Using lblBrush As New SolidBrush(Color.FromArgb(60, 60, 60))
                 Dim sf As New StringFormat() With {.Alignment = StringAlignment.Center, .LineAlignment = StringAlignment.Center}
-                g.DrawString(segments(i).Label, New Font(smallFont.FontFamily, smallFont.Size * 0.8F), lblBrush, segRect, sf)
+                Using labelFont As New Font(_cachedSmallFont.FontFamily, _cachedSmallFont.Size * 0.8F)
+                    g.DrawString(segment.Label, labelFont, lblBrush, segRect, sf)
+                End Using
             End Using
 
             x0 += segW
             currentMax = maxVal
         Next
 
-        ' Scale numbers 0..12
+        ' Scale numbers 0..12 - use cached font
         Dim tickY = barRect.Bottom + 1
         Using tickBrush As New SolidBrush(Color.FromArgb(80, 80, 80))
-            For v As Integer = 0 To 12 Step 2
-                Dim tx = barRect.Left + CInt(v / total * barRect.Width)
-                g.DrawString(v.ToString(), New Font(smallFont.FontFamily, smallFont.Size * 0.8F), tickBrush, tx - 6, tickY)
-            Next
+            Using tickFont As New Font(_cachedSmallFont.FontFamily, _cachedSmallFont.Size * 0.8F)
+                For v As Integer = 0 To 12 Step 2
+                    Dim tx = barRect.Left + CInt(v / total * barRect.Width)
+                    g.DrawString(v.ToString(), tickFont, tickBrush, tx - 6, tickY)
+                Next
+            End Using
         End Using
 
         ' Sun icon on left, smaller
@@ -196,24 +255,28 @@ Public Class SolarUvCombinedMeter
         Dim iconY As Integer = barRect.Top + (barRect.Height - iconSize) \ 2
         DrawSun(g, New Rectangle(iconX, iconY, iconSize, iconSize))
 
-        ' Current/peak block offset down 15px
+        ' Current/peak block - use cached font
         Dim textRight As Integer = rect.Right - CInt(rect.Width * 0.04)
-        Dim baseY As Integer = barRect.Bottom + CInt(valueFont.Height * 0.1) + 15
+        Dim baseY As Integer = barRect.Bottom + CInt(_cachedValueFont.Height * 0.1) + 15
         Using greenBrush As New SolidBrush(Color.FromArgb(0, 120, 0))
             Dim fmt As New StringFormat() With {.Alignment = StringAlignment.Far}
-            g.DrawString($"Current: {_uvIndex:0.0}", New Font(valueFont, FontStyle.Bold), greenBrush, textRight, baseY, fmt)
+            Using boldFont As New Font(_cachedValueFont, FontStyle.Bold)
+                g.DrawString($"Current: {_uvIndex:0.0}", boldFont, greenBrush, textRight, baseY, fmt)
+            End Using
         End Using
         If _showPeak Then
             Using darkBrush As New SolidBrush(Color.FromArgb(70, 70, 70))
                 Dim fmt As New StringFormat() With {.Alignment = StringAlignment.Far}
-                g.DrawString($"Peak: {_uvPeak:0.0}", smallFont, darkBrush, textRight, baseY + CInt(valueFont.Height * 0.75), fmt)
+                g.DrawString($"Peak: {_uvPeak:0.0}", _cachedSmallFont, darkBrush, textRight, baseY + CInt(_cachedValueFont.Height * 0.75), fmt)
             End Using
         End If
 
-        ' Protection message offset down 15px
+        ' Protection message - use cached font
         Using msgBrush As New SolidBrush(Color.FromArgb(100, 100, 100))
-            Dim msgY = baseY + CInt(valueFont.Height * If(_showPeak, 1.5, 0.7)) + 15
-            g.DrawString(GetProtectionMessage(_uvIndex), New Font(smallFont, FontStyle.Regular), msgBrush, rect.Left + CInt(rect.Width * 0.1), msgY)
+            Dim msgY = baseY + CInt(_cachedValueFont.Height * If(_showPeak, 1.5, 0.7)) + 15
+            Using msgFont As New Font(_cachedSmallFont, FontStyle.Regular)
+                g.DrawString(GetProtectionMessage(_uvIndex), msgFont, msgBrush, rect.Left + CInt(rect.Width * 0.1), msgY)
+            End Using
         End Using
 
         ' Pointer - larger, more visible indicator
@@ -232,18 +295,18 @@ Public Class SolarUvCombinedMeter
         End Using
     End Sub
 
-    Private Sub DrawSolar(g As Graphics, rect As Rectangle, titleFont As Font, valueFont As Font, smallFont As Font)
+    Private Sub DrawSolar(g As Graphics, rect As Rectangle)
         ' Offset entire solar section down to give UV more top space
         Dim offsetY As Integer = 25
 
-        ' Title
+        ' Title - use cached font
         Using titleBrush As New SolidBrush(Color.FromArgb(60, 60, 60))
-            g.DrawString("Solar Radiation", titleFont, titleBrush, rect.X, rect.Y + offsetY)
+            g.DrawString("Solar Radiation", _cachedTitleFont, titleBrush, rect.X, rect.Y + offsetY)
         End Using
 
         ' Bar area
-        Dim barTop As Integer = rect.Y + offsetY + CInt(titleFont.Height * 1.0)
-        Dim barHeight As Integer = Math.Max(CInt(rect.Height * 0.32), CInt(smallFont.Size * 2.6F))
+        Dim barTop As Integer = rect.Y + offsetY + CInt(_cachedTitleFont.Height * 1.0)
+        Dim barHeight As Integer = Math.Max(CInt(rect.Height * 0.32), CInt(_cachedSmallFont.Size * 2.6F))
         Dim barRect As New Rectangle(rect.X + CInt(rect.Width * 0.1), barTop, rect.Width - CInt(rect.Width * 0.12), barHeight)
 
         Using lg As New LinearGradientBrush(barRect, Color.FromArgb(235, 235, 235), Color.FromArgb(210, 210, 210), 90.0F)
@@ -265,13 +328,15 @@ Public Class SolarUvCombinedMeter
         Dim iconY As Integer = barRect.Top + (barRect.Height - iconSize) \ 2
         DrawSun(g, New Rectangle(iconX, iconY, iconSize, iconSize))
 
-        ' Scale numbers
+        ' Scale numbers - use cached font
         Using tickBrush As New SolidBrush(Color.FromArgb(80, 80, 80))
-            Dim steps() As Integer = {0, 200, 400, 600, 800, 1000, 1200}
-            For Each v In steps
-                Dim tx = barRect.Left + CInt((v / _maxRadiation) * barRect.Width)
-                g.DrawString(v.ToString(), New Font(smallFont.FontFamily, smallFont.Size * 0.8F), tickBrush, tx - 10, barRect.Bottom + 1)
-            Next
+            Using tickFont As New Font(_cachedSmallFont.FontFamily, _cachedSmallFont.Size * 0.8F)
+                Dim steps() As Integer = {0, 200, 400, 600, 800, 1000, 1200}
+                For Each v In steps
+                    Dim tx = barRect.Left + CInt((v / _maxRadiation) * barRect.Width)
+                    g.DrawString(v.ToString(), tickFont, tickBrush, tx - 10, barRect.Bottom + 1)
+                Next
+            End Using
         End Using
 
         ' Pointer - larger, more visible indicator
@@ -290,12 +355,14 @@ Public Class SolarUvCombinedMeter
             g.DrawEllipse(outlinePen, pointerX - bubbleR, barRect.Top + (barRect.Height \ 2) - bubbleR, bubbleR * 2, bubbleR * 2)
         End Using
 
-        ' Value text closer to scale
+        ' Value text closer to scale - use cached font
         Using blackBrush As New SolidBrush(Color.Black)
-            Dim txt = $"{_solarRadiation:0} W/mï¿½"
+            Dim txt = $"{_solarRadiation:0} W/m²"
             Dim sf As New StringFormat() With {.Alignment = StringAlignment.Center}
-            Dim valueY As Integer = barRect.Bottom + CInt(smallFont.Height * 0.75)
-            g.DrawString(txt, New Font(valueFont, FontStyle.Bold), blackBrush, rect.Left + rect.Width \ 2, valueY)
+            Dim valueY As Integer = barRect.Bottom + CInt(_cachedSmallFont.Height * 0.75)
+            Using boldFont As New Font(_cachedValueFont, FontStyle.Bold)
+                g.DrawString(txt, boldFont, blackBrush, rect.Left + rect.Width \ 2, valueY)
+            End Using
         End Using
     End Sub
 

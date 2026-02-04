@@ -1,4 +1,4 @@
-﻿Imports System.ComponentModel
+Imports System.ComponentModel
 Imports System.Drawing
 Imports System.Drawing.Drawing2D
 Imports System.Drawing.Text
@@ -14,6 +14,15 @@ Public Class PrecipTowersControl
 
     ' Default max height per tower in inches: Day=5, Yesterday=5, Month=30, Year=75, AllTime=400
     Private _defaultScales As Single() = {5.0F, 5.0F, 15.0F, 60.0F, 350.0F}
+
+    ' Cached fonts for performance (avoid creating on every paint)
+    Private _cachedAmountFont As Font
+    Private _cachedLabelFont As Font
+    Private _cachedMaxFont As Font
+    Private _lastFontSize As Single = 0
+
+    ' Dispose tracking
+    Private _disposed As Boolean = False
 
     <Browsable(True)>
     <Category("Data")>
@@ -63,6 +72,41 @@ Public Class PrecipTowersControl
         SetStyle(ControlStyles.UserPaint Or ControlStyles.AllPaintingInWmPaint Or ControlStyles.OptimizedDoubleBuffer, True)
         Me.MinimumSize = New Size(200, 120)
         Me.Size = New Size(420, 200)
+        UpdateCachedFonts()
+    End Sub
+
+    ''' <summary>
+    ''' Update cached fonts when control font changes
+    ''' </summary>
+    Private Sub UpdateCachedFonts()
+        _cachedAmountFont?.Dispose()
+        _cachedLabelFont?.Dispose()
+        _cachedMaxFont?.Dispose()
+
+        Dim baseFont As Font = If(Me.Font, SystemFonts.DefaultFont)
+        _cachedAmountFont = New Font(baseFont.FontFamily, Math.Max(8, baseFont.Size), FontStyle.Bold)
+        _cachedLabelFont = New Font(baseFont.FontFamily, Math.Max(7, baseFont.Size - 1), FontStyle.Regular)
+        _cachedMaxFont = New Font(baseFont.FontFamily, Math.Max(6, baseFont.Size - 2), FontStyle.Regular)
+        _lastFontSize = baseFont.Size
+    End Sub
+
+    Protected Overrides Sub OnFontChanged(e As EventArgs)
+        MyBase.OnFontChanged(e)
+        UpdateCachedFonts()
+        Invalidate()
+    End Sub
+
+    Protected Overrides Sub Dispose(disposing As Boolean)
+        If Not _disposed Then
+            If disposing Then
+                ' Dispose managed resources (cached fonts)
+                _cachedAmountFont?.Dispose()
+                _cachedLabelFont?.Dispose()
+                _cachedMaxFont?.Dispose()
+            End If
+            _disposed = True
+        End If
+        MyBase.Dispose(disposing)
     End Sub
 
     Protected Overrides Sub OnPaint(e As PaintEventArgs)
@@ -71,6 +115,11 @@ Public Class PrecipTowersControl
         g.SmoothingMode = SmoothingMode.AntiAlias
         g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit
         g.PixelOffsetMode = PixelOffsetMode.HighQuality
+
+        ' Recreate fonts if control font changed
+        If Me.Font IsNot Nothing AndAlso Me.Font.Size <> _lastFontSize Then
+            UpdateCachedFonts()
+        End If
 
         Dim towerCount = _values.Length
         If towerCount = 0 Then Return
@@ -211,41 +260,35 @@ Public Class PrecipTowersControl
             fmt.Alignment = StringAlignment.Center
             fmt.LineAlignment = StringAlignment.Near
 
-            ' Amount text with shadow
+            ' Amount text with shadow - use cached font
             Dim amountText As String = String.Format("{0:0.##} {1}", value, _units)
-            Using fontAmount As New Font(Me.Font.FontFamily, Math.Max(8, Me.Font.Size), FontStyle.Bold)
-                Dim amtSize = g.MeasureString(amountText, fontAmount)
-                Dim amtX As Single = x + towerWidth / 2.0F
-                Dim amtY As Single = towerBottom + 2
+            Dim amtSize = g.MeasureString(amountText, _cachedAmountFont)
+            Dim amtX As Single = x + towerWidth / 2.0F
+            Dim amtY As Single = towerBottom + 2
 
-                ' Shadow
-                Using shadowBrush As New SolidBrush(Color.FromArgb(30, 0, 0, 0))
-                    g.DrawString(amountText, fontAmount, shadowBrush, amtX + 1, amtY + 1, fmt)
-                End Using
-
-                ' Main text
-                Using amountBrush As New SolidBrush(Color.FromArgb(40, 40, 40))
-                    g.DrawString(amountText, fontAmount, amountBrush, amtX, amtY, fmt)
-                End Using
-
-                ' Category label
-                Using fontLabel As New Font(Me.Font.FontFamily, Math.Max(7, Me.Font.Size - 1), FontStyle.Regular)
-                    Using labelBrush As New SolidBrush(Color.FromArgb(120, 120, 120))
-                        Dim lblY As Single = amtY + amtSize.Height - 2
-                        g.DrawString(label, fontLabel, labelBrush, amtX, lblY, fmt)
-                    End Using
-                End Using
+            ' Shadow
+            Using shadowBrush As New SolidBrush(Color.FromArgb(30, 0, 0, 0))
+                g.DrawString(amountText, _cachedAmountFont, shadowBrush, amtX + 1, amtY + 1, fmt)
             End Using
 
-            ' Max scale at top (small, subtle)
+            ' Main text
+            Using amountBrush As New SolidBrush(Color.FromArgb(40, 40, 40))
+                g.DrawString(amountText, _cachedAmountFont, amountBrush, amtX, amtY, fmt)
+            End Using
+
+            ' Category label - use cached font
+            Using labelBrush As New SolidBrush(Color.FromArgb(120, 120, 120))
+                Dim lblY As Single = amtY + amtSize.Height - 2
+                g.DrawString(label, _cachedLabelFont, labelBrush, amtX, lblY, fmt)
+            End Using
+
+            ' Max scale at top (small, subtle) - use cached font
             Dim maxText As String = String.Format("{0:0.#} {1}", maxScale, _units)
-            Using fontMax As New Font(Me.Font.FontFamily, Math.Max(6, Me.Font.Size - 2), FontStyle.Regular)
-                Using maxBrush As New SolidBrush(Color.FromArgb(140, 140, 140))
-                    Dim maxSize = g.MeasureString(maxText, fontMax)
-                    Dim maxX As Single = x + towerWidth / 2.0F
-                    Dim maxY As Single = Math.Max(2, 22 - maxSize.Height)
-                    g.DrawString(maxText, fontMax, maxBrush, maxX, maxY, fmt)
-                End Using
+            Using maxBrush As New SolidBrush(Color.FromArgb(140, 140, 140))
+                Dim maxSize = g.MeasureString(maxText, _cachedMaxFont)
+                Dim maxX As Single = x + towerWidth / 2.0F
+                Dim maxY As Single = Math.Max(2, 22 - maxSize.Height)
+                g.DrawString(maxText, _cachedMaxFont, maxBrush, maxX, maxY, fmt)
             End Using
         End Using
     End Sub

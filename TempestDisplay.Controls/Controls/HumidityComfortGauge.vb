@@ -15,6 +15,27 @@ Public Class HumidityComfortGauge
     Private _showComfortZones As Boolean = True
     Private _labelText As String = "Relative Humidity"
 
+    ' Property change threshold to avoid excessive repaints
+    Private Const HUMIDITY_CHANGE_THRESHOLD As Single = 0.5F
+
+    ' Cached fonts for performance (avoid creating on every paint)
+    Private _cachedFont As Font
+    Private _cachedSmallFont As Font
+    Private _cachedLabelFont As Font
+    Private _lastFontSize As Single = 0
+
+    ' Dispose tracking
+    Private _disposed As Boolean = False
+
+    ' Static readonly comfort zones to avoid allocation on every paint
+    Private Shared ReadOnly ComfortZones As (Start As Single, [End] As Single, Color As Color)() = {
+        (0.0F, 30.0F, Color.FromArgb(100, 220, 180, 120)),
+        (30.0F, 40.0F, Color.FromArgb(100, 220, 220, 150)),
+        (40.0F, 60.0F, Color.FromArgb(100, 100, 200, 100)),
+        (60.0F, 70.0F, Color.FromArgb(100, 150, 200, 220)),
+        (70.0F, 100.0F, Color.FromArgb(100, 100, 150, 220))
+    }
+
     <Browsable(True)>
     <Category("Data")>
     <DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)>
@@ -23,7 +44,10 @@ Public Class HumidityComfortGauge
             Return _humidity
         End Get
         Set(value As Single)
-            _humidity = Math.Max(0, Math.Min(100, value))
+            Dim clampedValue = Math.Max(0, Math.Min(100, value))
+            ' Only invalidate if change exceeds threshold
+            If Math.Abs(_humidity - clampedValue) < HUMIDITY_CHANGE_THRESHOLD Then Return
+            _humidity = clampedValue
             Invalidate()
         End Set
     End Property
@@ -58,6 +82,41 @@ Public Class HumidityComfortGauge
         DoubleBuffered = True
         SetStyle(ControlStyles.UserPaint Or ControlStyles.AllPaintingInWmPaint Or ControlStyles.OptimizedDoubleBuffer, True)
         Me.MinimumSize = New Size(150, 100)
+        UpdateCachedFonts()
+    End Sub
+
+    ''' <summary>
+    ''' Update cached fonts when control font changes
+    ''' </summary>
+    Private Sub UpdateCachedFonts()
+        _cachedFont?.Dispose()
+        _cachedSmallFont?.Dispose()
+        _cachedLabelFont?.Dispose()
+
+        Dim baseFont As Font = If(Me.Font, SystemFonts.DefaultFont)
+        _cachedFont = New Font("Arial", 8, FontStyle.Regular)
+        _cachedSmallFont = New Font("Segoe UI", 12, FontStyle.Bold)
+        _cachedLabelFont = New Font("Segoe UI", 9.0F, FontStyle.Bold)
+        _lastFontSize = baseFont.Size
+    End Sub
+
+    Protected Overrides Sub OnFontChanged(e As EventArgs)
+        MyBase.OnFontChanged(e)
+        UpdateCachedFonts()
+        Invalidate()
+    End Sub
+
+    Protected Overrides Sub Dispose(disposing As Boolean)
+        If Not _disposed Then
+            If disposing Then
+                ' Dispose managed resources (cached fonts)
+                _cachedFont?.Dispose()
+                _cachedSmallFont?.Dispose()
+                _cachedLabelFont?.Dispose()
+            End If
+            _disposed = True
+        End If
+        MyBase.Dispose(disposing)
     End Sub
 
     Protected Overrides Sub OnPaint(e As PaintEventArgs)
@@ -65,6 +124,11 @@ Public Class HumidityComfortGauge
         Dim g = e.Graphics
         g.SmoothingMode = SmoothingMode.AntiAlias
         g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit
+
+        ' Recreate fonts if control font changed
+        If Me.Font IsNot Nothing AndAlso Me.Font.Size <> _lastFontSize Then
+            UpdateCachedFonts()
+        End If
 
         Dim w = Me.ClientSize.Width
         Dim h = Me.ClientSize.Height
@@ -90,17 +154,12 @@ Public Class HumidityComfortGauge
 
     Private Sub DrawComfortZones(g As Graphics, cx As Single, cy As Single, radius As Single)
         If Not _showComfortZones Then Return
-        Dim zones As New List(Of Tuple(Of Single, Single, Color)) From {
-            Tuple.Create(0.0F, 30.0F, Color.FromArgb(100, 220, 180, 120)),
-            Tuple.Create(30.0F, 40.0F, Color.FromArgb(100, 220, 220, 150)),
-            Tuple.Create(40.0F, 60.0F, Color.FromArgb(100, 100, 200, 100)),
-            Tuple.Create(60.0F, 70.0F, Color.FromArgb(100, 150, 200, 220)),
-            Tuple.Create(70.0F, 100.0F, Color.FromArgb(100, 100, 150, 220))
-        }
-        For Each zone In zones
-            Dim startAngle = 180 + (zone.Item1 / 100) * 180
-            Dim sweepAngle = ((zone.Item2 - zone.Item1) / 100) * 180
-            Using zonePen As New Pen(zone.Item3, radius * 0.15F)
+        
+        ' Use static readonly array instead of creating new list every paint
+        For Each zone In ComfortZones
+            Dim startAngle = 180 + (zone.Start / 100) * 180
+            Dim sweepAngle = ((zone.End - zone.Start) / 100) * 180
+            Using zonePen As New Pen(zone.Color, radius * 0.15F)
                 g.DrawArc(zonePen, cx - radius * 0.85F, cy - radius * 0.85F, radius * 1.7F, radius * 1.7F, startAngle, sweepAngle)
             End Using
         Next
@@ -130,19 +189,18 @@ Public Class HumidityComfortGauge
         End Using
     End Sub
 
-    Private Shared Sub DrawScale(g As Graphics, cx As Single, cy As Single, radius As Single)
-        Using font As New Font("Arial", 8, FontStyle.Regular)
-            Using brush As New SolidBrush(Color.FromArgb(80, 80, 80))
-                Using fmt As New StringFormat() With {.Alignment = StringAlignment.Center}
-                    For i = 0 To 100 Step 20
-                        Dim angle = 180 + (i / 100.0) * 180
-                        Dim angleRad = angle * Math.PI / 180
-                        Dim labelRadius = radius * 0.88F   '.88
-                        Dim x = CSng(cx + labelRadius * Math.Cos(angleRad))
-                        Dim y = CSng(cy + labelRadius * Math.Sin(angleRad))
-                        g.DrawString(i.ToString(), font, brush, x, y, fmt)
-                    Next
-                End Using
+    Private Sub DrawScale(g As Graphics, cx As Single, cy As Single, radius As Single)
+        ' Use cached font instead of creating new one
+        Using brush As New SolidBrush(Color.FromArgb(80, 80, 80))
+            Using fmt As New StringFormat() With {.Alignment = StringAlignment.Center}
+                For i = 0 To 100 Step 20
+                    Dim angle = 180 + (i / 100.0) * 180
+                    Dim angleRad = angle * Math.PI / 180
+                    Dim labelRadius = radius * 0.88F
+                    Dim x = CSng(cx + labelRadius * Math.Cos(angleRad))
+                    Dim y = CSng(cy + labelRadius * Math.Sin(angleRad))
+                    g.DrawString(i.ToString(), _cachedFont, brush, x, y, fmt)
+                Next
             End Using
         End Using
     End Sub
@@ -153,23 +211,21 @@ Public Class HumidityComfortGauge
         End Using
     End Sub
 
-    Private Shared Sub DrawReadout(g As Graphics, cx As Single, cy As Single, humidity As Single)
-        Using font As New Font("Segoe UI", 12, FontStyle.Bold)  '12
-            Using brush As New SolidBrush(Color.FromArgb(50, 50, 50))
-                Using fmt As New StringFormat() With {.Alignment = StringAlignment.Center, .LineAlignment = StringAlignment.Far}
-                    g.DrawString($"{humidity:0}%", font, brush, cx, cy - 10, fmt)       '-10
-                End Using
+    Private Sub DrawReadout(g As Graphics, cx As Single, cy As Single, humidity As Single)
+        ' Use cached font instead of creating new one
+        Using brush As New SolidBrush(Color.FromArgb(50, 50, 50))
+            Using fmt As New StringFormat() With {.Alignment = StringAlignment.Center, .LineAlignment = StringAlignment.Far}
+                g.DrawString($"{humidity:0}%", _cachedSmallFont, brush, cx, cy - 10, fmt)
             End Using
         End Using
     End Sub
 
-    Private Shared Sub DrawLabel(g As Graphics, cx As Single, h As Single, text As String)
-        Using font As New Font("Segoe UI", 9.0F, FontStyle.Bold)
-            Using brush As New SolidBrush(Color.FromArgb(70, 70, 70))
-                Using fmt As New StringFormat() With {.Alignment = StringAlignment.Center, .LineAlignment = StringAlignment.Far}
-                    Dim bottomMargin As Single = 44.0F  '24
-                    g.DrawString(text, font, brush, cx, h - bottomMargin, fmt)
-                End Using
+    Private Sub DrawLabel(g As Graphics, cx As Single, h As Single, text As String)
+        ' Use cached font instead of creating new one
+        Using brush As New SolidBrush(Color.FromArgb(70, 70, 70))
+            Using fmt As New StringFormat() With {.Alignment = StringAlignment.Center, .LineAlignment = StringAlignment.Far}
+                Dim bottomMargin As Single = 44.0F
+                g.DrawString(text, _cachedLabelFont, brush, cx, h - bottomMargin, fmt)
             End Using
         End Using
     End Sub

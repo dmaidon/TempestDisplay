@@ -1,42 +1,126 @@
-﻿Partial Public Class FrmMain
+Partial Public Class FrmMain
 
-    Private ReadOnly _customBackColor As Color = Color.AntiqueWhite
+Private ReadOnly _customBackColor As Color = Color.AntiqueWhite
 
-    ' New: hold a reference to the combined UV+Solar control so other partials can update it
-    Friend SolarUvCombined As Controls.SolarUvCombinedMeter
+''' <summary>
+''' Layout position constants for TlpData TableLayoutPanel
+''' Makes layout changes easier to maintain and understand
+''' </summary>
+Private Structure TlpDataLayout
+    ' Temperature Thermometers (Row 0)
+    Public Const ThermCurrentTempCol As Integer = 0
+    Public Const ThermCurrentTempRow As Integer = 0
+    Public Const ThermFeelsLikeCol As Integer = 1
+    Public Const ThermFeelsLikeRow As Integer = 0
+    Public Const ThermDewpointCol As Integer = 2
+    Public Const ThermDewpointRow As Integer = 0
 
-    ' New: hold a reference to combined Trend + Status control
-    Friend TrendStatusCombined As Controls.TrendStatusCombinedControl
+    ' Humidity Gauge (Row 0, spans 2 columns)
+    Public Const HumidityGaugeCol As Integer = 1
+    Public Const HumidityGaugeRow As Integer = 0
+    Public Const HumidityGaugeColSpan As Integer = 2
 
-    ' New: Sunrise/Sunset panel
-    Friend SunriseSunset As Controls.SunriseSunsetPanel
+    ' Barometer (Row 0, spans 2 columns)
+    Public Const BarometerCol As Integer = 4
+    Public Const BarometerRow As Integer = 0
+    Public Const BarometerColSpan As Integer = 2
 
-    ' New: Replace FanGaugeControl with HumidityComfortGauge
-    Friend HumidityGauge As Controls.HumidityComfortGauge
+    ' Precipitation Towers (Row 1, spans 2 columns)
+    Public Const PrecipTowersCol As Integer = 2
+    Public Const PrecipTowersRow As Integer = 1
+    Public Const PrecipTowersColSpan As Integer = 2
 
-    ' New: Cloud base panel
-    Friend CloudBase As Controls.CloudBasePanel
+    ' Rain Rate Gauge (Row 1)
+    Public Const RainRateCol As Integer = 4
+    Public Const RainRateRow As Integer = 1
+    Public Const RainRateColSpan As Integer = 1
 
-    ' New: Battery voltage display
-    Friend BatteryVoltage As Controls.BatteryVoltageControl
+    ' Wind Rose (Row 1, spans 2 columns)
+    Public Const WindRoseCol As Integer = 6
+    Public Const WindRoseRow As Integer = 1
+    Public Const WindRoseColSpan As Integer = 2
+
+    ' Air Density Altimeter (Row 1, spans 2 columns)
+    Public Const AirDensityCol As Integer = 6
+    Public Const AirDensityRow As Integer = 1
+    Public Const AirDensityColSpan As Integer = 2
+
+    ' Lightning Radar (Row 1, spans 2 columns)
+    Public Const LightningRadarCol As Integer = 4
+    Public Const LightningRadarRow As Integer = 2
+    Public Const LightningRadarColSpan As Integer = 2
+
+    ' Solar/UV Combined (Row 0, spans 2 columns)
+    Public Const SolarUvCol As Integer = 6
+    Public Const SolarUvRow As Integer = 0
+    Public Const SolarUvColSpan As Integer = 2
+
+    ' Trend/Status Combined (Row 2, spans 2 columns)
+    Public Const TrendStatusCol As Integer = 0
+    Public Const TrendStatusRow As Integer = 2
+    Public Const TrendStatusColSpan As Integer = 2
+
+    ' Sunrise/Sunset Panel (Row 2, spans 2 columns)
+    Public Const SunriseSunsetCol As Integer = 2
+    Public Const SunriseSunsetRow As Integer = 2
+    Public Const SunriseSunsetColSpan As Integer = 2
+
+    ' Cloud Base Panel (Row 2)
+    Public Const CloudBaseCol As Integer = 6
+    Public Const CloudBaseRow As Integer = 2
+
+    ' Battery Voltage (Row 2)
+    Public Const BatteryVoltageCol As Integer = 7
+    Public Const BatteryVoltageRow As Integer = 2
+End Structure
+
+' New: hold a reference to the combined UV+Solar control so other partials can update it
+Friend SolarUvCombined As Controls.SolarUvCombinedMeter
+
+' New: hold a reference to combined Trend + Status control
+Friend TrendStatusCombined As Controls.TrendStatusCombinedControl
+
+' New: Sunrise/Sunset panel
+Friend SunriseSunset As Controls.SunriseSunsetPanel
+
+' New: Replace FanGaugeControl with HumidityComfortGauge
+Friend HumidityGauge As Controls.HumidityComfortGauge
+
+' New: Cloud base panel
+Friend CloudBase As Controls.CloudBasePanel
+
+' New: Battery voltage display
+Friend BatteryVoltage As Controls.BatteryVoltageControl
+
+''' <summary>
+''' Helper method to configure thermometer controls with consistent settings
+''' </summary>
+Private Sub ConfigureThermometer(therm As Controls.TempThermometerControl,
+                                 label As String,
+                                 minF As Single,
+                                 maxF As Single,
+                                 showFreezeMarker As Boolean)
+    If therm Is Nothing Then
+        Log.Write($"WARNING: {label} thermometer is Nothing!")
+        Return
+    End If
+
+    therm.Label = label
+    therm.BackColor = _customBackColor
+    therm.Font = New Font(If(therm.Font, SystemFonts.DefaultFont), FontStyle.Bold)
+    therm.MinF = minF
+    therm.MaxF = maxF
+    therm.ShowFreezeMarker = showFreezeMarker
+    therm.ShowDualScale = True
+End Sub
 
     Private Sub InitializeCustomcontrols()
 
         Try
-            ' Temperature thermometers (Phase 1 - replacing gauges with vertical thermometers)
+            ' Temperature thermometers (Phase 1 - simplified with helper method)
             If ThermCurrentTemp IsNot Nothing Then
                 Log.Write("ThermCurrentTemp control exists - configuring properties")
-                ThermCurrentTemp.Label = "Current"
-                ThermCurrentTemp.BackColor = _customBackColor
-                If ThermCurrentTemp.Font IsNot Nothing Then
-                    ThermCurrentTemp.Font = New Font(ThermCurrentTemp.Font, FontStyle.Bold)
-                Else
-                    ThermCurrentTemp.Font = New Font("Segoe UI", 9, FontStyle.Bold)
-                End If
-                ThermCurrentTemp.MinF = -5
-                ThermCurrentTemp.MaxF = 110
-                ThermCurrentTemp.ShowFreezeMarker = True
-                ThermCurrentTemp.ShowDualScale = True
+                ConfigureThermometer(ThermCurrentTemp, "Current", -5, 110, True)
                 Log.Write($"ThermCurrentTemp configured - Visible:{ThermCurrentTemp.Visible}, Parent:{If(ThermCurrentTemp.Parent IsNot Nothing, ThermCurrentTemp.Parent.Name, "None")}")
             Else
                 Log.Write("ThermCurrentTemp control is Nothing - creating dynamically")
@@ -52,8 +136,8 @@
                             .ShowDualScale = True
                         }
                         ThermCurrentTemp.Font = New Font(ThermCurrentTemp.Font, FontStyle.Bold)
-                        TlpData.Controls.Add(ThermCurrentTemp, 0, 0)
-                        Log.Write("ThermCurrentTemp created and added to TlpData[0,0]")
+                        TlpData.Controls.Add(ThermCurrentTemp, TlpDataLayout.ThermCurrentTempCol, TlpDataLayout.ThermCurrentTempRow)
+                        Log.Write($"ThermCurrentTemp created and added to TlpData[{TlpDataLayout.ThermCurrentTempCol},{TlpDataLayout.ThermCurrentTempRow}]")
                     Else
                         Log.Write("WARNING: TlpData is Nothing - cannot add ThermCurrentTemp")
                     End If
@@ -63,17 +147,7 @@
             End If
 
             If ThermFeelsLike IsNot Nothing Then
-                ThermFeelsLike.Label = "Feels Like"
-                ThermFeelsLike.BackColor = _customBackColor
-                If ThermFeelsLike.Font IsNot Nothing Then
-                    ThermFeelsLike.Font = New Font(ThermFeelsLike.Font, FontStyle.Bold)
-                Else
-                    ThermFeelsLike.Font = New Font("Segoe UI", 9, FontStyle.Bold)
-                End If
-                ThermFeelsLike.MinF = -10
-                ThermFeelsLike.MaxF = 120
-                ThermFeelsLike.ShowFreezeMarker = True
-                ThermFeelsLike.ShowDualScale = True
+                ConfigureThermometer(ThermFeelsLike, "Feels Like", -10, 120, True)
             Else
                 Log.Write("ThermFeelsLike control is Nothing - creating dynamically")
                 Try
@@ -88,8 +162,8 @@
                             .ShowDualScale = True
                         }
                         ThermFeelsLike.Font = New Font(ThermFeelsLike.Font, FontStyle.Bold)
-                        TlpData.Controls.Add(ThermFeelsLike, 1, 0)
-                        Log.Write("ThermFeelsLike created and added to TlpData[1,0]")
+                        TlpData.Controls.Add(ThermFeelsLike, TlpDataLayout.ThermFeelsLikeCol, TlpDataLayout.ThermFeelsLikeRow)
+                        Log.Write($"ThermFeelsLike created and added to TlpData[{TlpDataLayout.ThermFeelsLikeCol},{TlpDataLayout.ThermFeelsLikeRow}]")
                     Else
                         Log.Write("WARNING: TlpData is Nothing - cannot add ThermFeelsLike")
                     End If
@@ -99,17 +173,7 @@
             End If
 
             If ThermDewpoint IsNot Nothing Then
-                ThermDewpoint.Label = "Dew Point"
-                ThermDewpoint.BackColor = _customBackColor
-                If ThermDewpoint.Font IsNot Nothing Then
-                    ThermDewpoint.Font = New Font(ThermDewpoint.Font, FontStyle.Bold)
-                Else
-                    ThermDewpoint.Font = New Font("Segoe UI", 9, FontStyle.Bold)
-                End If
-                ThermDewpoint.MinF = -5
-                ThermDewpoint.MaxF = 110
-                ThermDewpoint.ShowFreezeMarker = False
-                ThermDewpoint.ShowDualScale = True
+                ConfigureThermometer(ThermDewpoint, "Dew Point", -5, 110, False)
             Else
                 Log.Write("ThermDewpoint control is Nothing - creating dynamically")
                 Try
@@ -120,12 +184,12 @@
                             .Dock = DockStyle.Fill,
                             .MinF = -5,
                             .MaxF = 110,
-                            .ShowFreezeMarker = True,
+                            .ShowFreezeMarker = False,
                             .ShowDualScale = True
                         }
                         ThermDewpoint.Font = New Font(ThermDewpoint.Font, FontStyle.Bold)
-                        TlpData.Controls.Add(ThermDewpoint, 2, 0)
-                        Log.Write("ThermDewpoint created and added to TlpData[2,0]")
+                        TlpData.Controls.Add(ThermDewpoint, TlpDataLayout.ThermDewpointCol, TlpDataLayout.ThermDewpointRow)
+                        Log.Write($"ThermDewpoint created and added to TlpData[{TlpDataLayout.ThermDewpointCol},{TlpDataLayout.ThermDewpointRow}]")
                     Else
                         Log.Write("WARNING: TlpData is Nothing - cannot add ThermDewpoint")
                     End If
@@ -150,10 +214,10 @@
                             .BackColor = _customBackColor,
                             .Dock = DockStyle.Fill
                         }
-                        ' Place humidity gauge near thermometers; keep same grid position that FgRH used
-                        TlpData.Controls.Add(HumidityGauge, 1, 0)
-                        TlpData.SetColumnSpan(HumidityGauge, 2)
-                        Log.Write("HumidityComfortGauge created and added to TlpData[1,0] with ColumnSpan=2")
+                        ' Place humidity gauge near thermometers
+                        TlpData.Controls.Add(HumidityGauge, TlpDataLayout.HumidityGaugeCol, TlpDataLayout.HumidityGaugeRow)
+                        TlpData.SetColumnSpan(HumidityGauge, TlpDataLayout.HumidityGaugeColSpan)
+                        Log.Write($"HumidityComfortGauge created and added to TlpData[{TlpDataLayout.HumidityGaugeCol},{TlpDataLayout.HumidityGaugeRow}] with ColumnSpan={TlpDataLayout.HumidityGaugeColSpan}")
                     Else
                         Log.Write("WARNING: TlpData is Nothing - cannot add HumidityComfortGauge")
                     End If
@@ -180,11 +244,11 @@
                         }
                         PTC.Font = New Font(PTC.Font.FontFamily, 8, FontStyle.Bold)
 
-                        ' Add to TableLayoutPanel at column 0, row 4 with column span of 2
-                        TlpData.Controls.Add(PTC, 2, 1)
-                        TlpData.SetColumnSpan(PTC, 2)
+                        ' Add to TableLayoutPanel with layout constants
+                        TlpData.Controls.Add(PTC, TlpDataLayout.PrecipTowersCol, TlpDataLayout.PrecipTowersRow)
+                        TlpData.SetColumnSpan(PTC, TlpDataLayout.PrecipTowersColSpan)
 
-                        Log.Write("PTC control created and added to TlpData[6,0] with ColumnSpan=2")
+                        Log.Write($"PTC control created and added to TlpData[{TlpDataLayout.PrecipTowersCol},{TlpDataLayout.PrecipTowersRow}] with ColumnSpan={TlpDataLayout.PrecipTowersColSpan}")
                     Else
                         Log.Write("WARNING: TlpData is Nothing - cannot add PTC")
                     End If
@@ -207,10 +271,10 @@
                             .Label = "Wind"
                         }
                         WrWindSpeed.Font = New Font(WrWindSpeed.Font.FontFamily, 8, FontStyle.Bold)
-                        ' Add to TableLayoutPanel at column 4, row 2 with column span of 2
-                        TlpData.Controls.Add(WrWindSpeed, 6, 1)
-                        TlpData.SetColumnSpan(WrWindSpeed, 2)
-                        Log.Write("WrWindSpeed control created and added to TlpData[4,2] with ColumnSpan=2")
+                        ' Add to TableLayoutPanel with layout constants
+                        TlpData.Controls.Add(WrWindSpeed, TlpDataLayout.WindRoseCol, TlpDataLayout.WindRoseRow)
+                        TlpData.SetColumnSpan(WrWindSpeed, TlpDataLayout.WindRoseColSpan)
+                        Log.Write($"WrWindSpeed control created and added to TlpData[{TlpDataLayout.WindRoseCol},{TlpDataLayout.WindRoseRow}] with ColumnSpan={TlpDataLayout.WindRoseColSpan}")
                     Else
                         Log.Write("WARNING: TlpData is Nothing - cannot add WrWindSpeed")
                     End If
@@ -232,9 +296,9 @@
                             .Dock = DockStyle.Fill
                         }
                         BaroPressure.Font = New Font(BaroPressure.Font, FontStyle.Bold)
-                        TlpData.Controls.Add(BaroPressure, 4, 0)
-                        TlpData.SetColumnSpan(BaroPressure, 2)
-                        Log.Write("BaroPressure created and added to TlpData[4,0] with ColumnSpan=2")
+                        TlpData.Controls.Add(BaroPressure, TlpDataLayout.BarometerCol, TlpDataLayout.BarometerRow)
+                        TlpData.SetColumnSpan(BaroPressure, TlpDataLayout.BarometerColSpan)
+                        Log.Write($"BaroPressure created and added to TlpData[{TlpDataLayout.BarometerCol},{TlpDataLayout.BarometerRow}] with ColumnSpan={TlpDataLayout.BarometerColSpan}")
                     Else
                         Log.Write("WARNING: TlpData is Nothing - cannot add BaroPressure")
                     End If
@@ -256,9 +320,9 @@
                             .Dock = DockStyle.Fill
                         }
                         AltAirDensity.Font = New Font(AltAirDensity.Font, FontStyle.Bold)
-                        TlpData.Controls.Add(AltAirDensity, 6, 1)
-                        TlpData.SetColumnSpan(AltAirDensity, 2)
-                        Log.Write("AltAirDensity created and added to TlpData[6,1] with ColumnSpan=2")
+                        TlpData.Controls.Add(AltAirDensity, TlpDataLayout.AirDensityCol, TlpDataLayout.AirDensityRow)
+                        TlpData.SetColumnSpan(AltAirDensity, TlpDataLayout.AirDensityColSpan)
+                        Log.Write($"AltAirDensity created and added to TlpData[{TlpDataLayout.AirDensityCol},{TlpDataLayout.AirDensityRow}] with ColumnSpan={TlpDataLayout.AirDensityColSpan}")
                     Else
                         Log.Write("WARNING: TlpData is Nothing - cannot add AltAirDensity")
                     End If
@@ -280,9 +344,9 @@
                             .Dock = DockStyle.Fill
                         }
                         RainRate.Font = New Font(RainRate.Font, FontStyle.Bold)
-                        TlpData.Controls.Add(RainRate, 4, 1)
-                        TlpData.SetColumnSpan(RainRate, 1)
-                        Log.Write("RainRate created and added to TlpData[4,1] with ColumnSpan=2")
+                        TlpData.Controls.Add(RainRate, TlpDataLayout.RainRateCol, TlpDataLayout.RainRateRow)
+                        TlpData.SetColumnSpan(RainRate, TlpDataLayout.RainRateColSpan)
+                        Log.Write($"RainRate created and added to TlpData[{TlpDataLayout.RainRateCol},{TlpDataLayout.RainRateRow}] with ColumnSpan={TlpDataLayout.RainRateColSpan}")
                     Else
                         Log.Write("WARNING: TlpData is Nothing - cannot add RainRate")
                     End If
@@ -304,9 +368,9 @@
                             .Dock = DockStyle.Fill
                         }
                         LightningRadar.Font = New Font(LightningRadar.Font, FontStyle.Bold)
-                        TlpData.Controls.Add(LightningRadar, 0, 2)
-                        TlpData.SetColumnSpan(LightningRadar, 2)
-                        Log.Write("LightningRadar created and added to TlpData[0,2] with ColumnSpan=2")
+                        TlpData.Controls.Add(LightningRadar, TlpDataLayout.LightningRadarCol, TlpDataLayout.LightningRadarRow)
+                        TlpData.SetColumnSpan(LightningRadar, TlpDataLayout.LightningRadarColSpan)
+                        Log.Write($"LightningRadar created and added to TlpData[{TlpDataLayout.LightningRadarCol},{TlpDataLayout.LightningRadarRow}] with ColumnSpan={TlpDataLayout.LightningRadarColSpan}")
                     Else
                         Log.Write("WARNING: TlpData is Nothing - cannot add LightningRadar")
                     End If
