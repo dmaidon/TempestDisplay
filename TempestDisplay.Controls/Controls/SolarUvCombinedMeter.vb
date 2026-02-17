@@ -1,3 +1,4 @@
+' Last Edit: February 17, 2026 (Add Last Edit header per repo guidelines)
 Imports System.ComponentModel
 Imports System.Drawing
 Imports System.Drawing.Drawing2D
@@ -10,6 +11,7 @@ Public Class SolarUvCombinedMeter
 
     ' Data
     Private _uvIndex As Single
+
     Private _uvPeak As Single
     Private _solarRadiation As Single
     Private _maxRadiation As Single = 1200.0F
@@ -17,10 +19,12 @@ Public Class SolarUvCombinedMeter
 
     ' Property change thresholds to avoid excessive repaints
     Private Const UV_CHANGE_THRESHOLD As Single = 0.1F
+
     Private Const SOLAR_CHANGE_THRESHOLD As Single = 5.0F
 
     ' Cached fonts for performance (avoid creating on every paint)
     Private _cachedTitleFont As Font
+
     Private _cachedValueFont As Font
     Private _cachedSmallFont As Font
     Private _lastFontSize As Single = 0
