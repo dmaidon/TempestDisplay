@@ -1,4 +1,5 @@
-﻿Imports System.ComponentModel
+' Last Edit: February 17, 2026 (Optimize log list population)
+Imports System.ComponentModel
 Imports System.IO
 
 Public Class FrmMain
@@ -198,11 +199,13 @@ Public Class FrmMain
             LbLogs.Items.Clear()
 
             If Directory.Exists(Globals.LogDir) Then
-                Dim files = Directory.GetFiles(Globals.LogDir)
-                Dim sorted = files.OrderByDescending(Function(p) New FileInfo(p).LastWriteTime).ToArray()
-                For Each filePath In sorted
+                Dim logDirInfo As New DirectoryInfo(Globals.LogDir)
+                Dim sorted As IEnumerable(Of FileInfo) = logDirInfo.
+                    EnumerateFiles("*.log", SearchOption.TopDirectoryOnly).
+                    OrderByDescending(Function(fi) fi.LastWriteTime)
+                For Each fileInfo In sorted
                     ' Add only the filename for display
-                    LbLogs.Items.Add(Path.GetFileName(filePath))
+                    LbLogs.Items.Add(fileInfo.Name)
                 Next
             Else
                 Log.Write("PopulateLogList: LogDir does not exist: " & Globals.LogDir)

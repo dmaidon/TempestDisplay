@@ -1,3 +1,4 @@
+' Last Edit: February 17, 2026 (Avoid handle creation during marshaling and skip disposed controls)
 Public NotInheritable Class UIService
 
     Private Sub New()
@@ -6,28 +7,20 @@ Public NotInheritable Class UIService
     Public Shared Sub SafeInvoke(control As Control, action As Action)
         If control Is Nothing OrElse action Is Nothing Then Return
 
+        If control.IsDisposed OrElse control.Disposing Then Return
+
         If control.InvokeRequired Then
+            If Not control.IsHandleCreated Then Return
             Try
-                ' Always invoke with handle creation embedded in the action
-                control.Invoke(Sub()
-                                   ' Ensure handle is created on UI thread
-                                   If Not control.IsHandleCreated Then
-                                       Dim h = control.Handle
-                                   End If
-                                   ' Execute the action
-                                   action()
-                               End Sub)
+                control.Invoke(action)
             Catch ex As ObjectDisposedException
                 ' Control was disposed during invoke - safe to ignore
             Catch ex As InvalidOperationException
                 ' Handle creation failed or control is disposing - safe to ignore
             End Try
         Else
-            ' Already on UI thread - ensure handle exists then execute
+            If Not control.IsHandleCreated Then Return
             Try
-                If Not control.IsHandleCreated Then
-                    Dim h = control.Handle
-                End If
                 action()
             Catch ex As ObjectDisposedException
                 ' Control was disposed - safe to ignore

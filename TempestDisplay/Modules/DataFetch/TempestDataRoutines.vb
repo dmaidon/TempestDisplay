@@ -1,4 +1,4 @@
-' Last Edit: January 15, 2026 (Added thread safety for LastTempestData, removed async sub, consolidated null checks, added cache invalidation)
+' Last Edit: February 17, 2026 (Batched station UI updates to reduce cross-thread invokes)
 Imports System.Globalization
 
 Imports TempestDisplay.Common.Weather
@@ -49,30 +49,74 @@ Friend Module TempestDataRoutines
     End Function
 
     ''' <summary>
+    ''' Helper to set control text with optional UI marshaling
+    ''' </summary>
+    Private Sub SetControlText(control As Control, text As String, useInvoke As Boolean)
+        If control Is Nothing Then Return
+
+        If useInvoke Then
+            UIService.SafeSetText(control, text)
+        Else
+            control.Text = text
+        End If
+    End Sub
+
+    ''' <summary>
+    ''' Helper to set control text with formatting and optional UI marshaling
+    ''' </summary>
+    Private Sub SetControlTextFormat(control As Control, format As String, args As Object(), useInvoke As Boolean)
+        If control Is Nothing Then Return
+
+        If useInvoke Then
+            UIService.SafeSetTextFormat(control, format, args)
+        Else
+            Try
+                control.Text = String.Format(format, args)
+            Catch ex As FormatException
+                control.Text = format
+                Log.WriteException(ex, $"[SetControlTextFormat] Format error for control '{control.Name}' with format '{format}' and args [{String.Join(",", args)}]")
+            End Try
+        End If
+    End Sub
+
+    ''' <summary>
     ''' Helper to update a label control with optional Tag-based formatting
     ''' </summary>
-    Private Sub UpdateLabelWithFormat(control As Control, value As Single, Optional defaultFormat As String = "F1")
+    Private Sub UpdateLabelWithFormat(control As Control, value As Single, Optional defaultFormat As String = "F1", Optional useInvoke As Boolean = True)
         If control Is Nothing Then Return
 
         Dim formatStr = If(control.Tag, "").ToString()
         If Not String.IsNullOrWhiteSpace(formatStr) AndAlso formatStr.Contains("{"c) Then
-            UIService.SafeSetTextFormat(control, formatStr, value)
+            SetControlTextFormat(control, formatStr, New Object() {value}, useInvoke)
         Else
-            UIService.SafeSetText(control, value.ToString(defaultFormat))
+            SetControlText(control, value.ToString(defaultFormat), useInvoke)
         End If
     End Sub
 
     ''' <summary>
     ''' Helper to update a label control with Tag-based formatting (string overload)
     ''' </summary>
-    Private Sub UpdateLabelWithFormat(control As Control, value As String)
+    Private Sub UpdateLabelWithFormat(control As Control, value As String, Optional useInvoke As Boolean = True)
         If control Is Nothing Then Return
 
         Dim formatStr = If(control.Tag, "").ToString()
         If Not String.IsNullOrWhiteSpace(formatStr) AndAlso formatStr.Contains("{"c) Then
-            UIService.SafeSetTextFormat(control, formatStr, value)
+            SetControlTextFormat(control, formatStr, New Object() {value}, useInvoke)
         Else
-            UIService.SafeSetText(control, value)
+            SetControlText(control, value, useInvoke)
+        End If
+    End Sub
+
+    ''' <summary>
+    ''' Helper to run a control update action with optional UI marshaling
+    ''' </summary>
+    Private Sub UpdateControl(control As Control, action As Action, useInvoke As Boolean)
+        If control Is Nothing OrElse action Is Nothing Then Return
+
+        If useInvoke Then
+            UIService.SafeInvoke(control, action)
+        Else
+            action()
         End If
     End Sub
 
@@ -103,15 +147,12 @@ Friend Module TempestDataRoutines
                 Return
             End If
 
-            ' Update all UI sections
-            UpdateTemperatureControls(frm, first)
-            UpdateWindControls(frm, first)
-            UpdateHumidityControls(frm, first)
-            UpdateRainMinutesControls(frm, first)
-            UpdatePressureControls(frm, first)
-            UpdateSolarControls(frm, first)
-            UpdateLightningControls(frm, first)
-            UpdateTimestampControl(frm, first)
+            ' Update all UI sections with batched invoke when needed
+            If frm.InvokeRequired Then
+                UIService.SafeInvoke(frm, Sub() UpdateStationUiCore(frm, first))
+            Else
+                UpdateStationUiCore(frm, first)
+            End If
             Await UpdateRainAccumulationAsync(frm, first).ConfigureAwait(False)
 
             Log.Write("[WriteStationData] Completed successfully")
@@ -123,44 +164,53 @@ Friend Module TempestDataRoutines
     ''' <summary>
     ''' Update temperature-related controls
     ''' </summary>
-    Private Sub UpdateTemperatureControls(frm As FrmMain, first As Ob)
+    Private Sub UpdateStationUiCore(frm As FrmMain, first As Ob)
+        UpdateTemperatureControls(frm, first, useInvoke:=False)
+        UpdateWindControls(frm, first, useInvoke:=False)
+        UpdateHumidityControls(frm, first, useInvoke:=False)
+        UpdateRainMinutesControls(frm, first, useInvoke:=False)
+        UpdatePressureControls(frm, first, useInvoke:=False)
+        UpdateSolarControls(frm, first, useInvoke:=False)
+        UpdateLightningControls(frm, first, useInvoke:=False)
+        UpdateTimestampControl(frm, first, useInvoke:=False)
+    End Sub
+
+    Private Sub UpdateTemperatureControls(frm As FrmMain, first As Ob, Optional useInvoke As Boolean = True)
         If first Is Nothing OrElse Not first.air_temperature.HasValue Then Return
 
         Dim tempC As Single = first.air_temperature.Value
         Dim tempF As Single = UnitConversions.CelsiusToFahrenheit(tempC)
 
-        If frm.TgCurrentTemp IsNot Nothing Then
-            UIService.SafeInvoke(frm.TgCurrentTemp, Sub()
-                                                        frm.TgCurrentTemp.TempF = tempF
-                                                        frm.TgCurrentTemp.TempC = tempC
-                                                    End Sub)
-        End If
+        UpdateControl(frm.TgCurrentTemp, Sub()
+                                             frm.TgCurrentTemp.TempF = tempF
+                                             frm.TgCurrentTemp.TempC = tempC
+                                         End Sub, useInvoke)
 
         ' Feels like temperature
         If first.feels_like.HasValue AndAlso frm.TgFeelsLike IsNot Nothing Then
             Dim feelsC As Single = first.feels_like.Value
             Dim feelsF As Single = UnitConversions.CelsiusToFahrenheit(feelsC)
-            UIService.SafeInvoke(frm.TgFeelsLike, Sub()
-                                                      frm.TgFeelsLike.TempF = feelsF
-                                                      frm.TgFeelsLike.TempC = feelsC
-                                                  End Sub)
+            UpdateControl(frm.TgFeelsLike, Sub()
+                                               frm.TgFeelsLike.TempF = feelsF
+                                               frm.TgFeelsLike.TempC = feelsC
+                                           End Sub, useInvoke)
         End If
 
         ' Dew point temperature
         If first.dew_point.HasValue AndAlso frm.TgDewpoint IsNot Nothing Then
             Dim dewC As Single = first.dew_point.Value
             Dim dewF As Single = UnitConversions.CelsiusToFahrenheit(dewC)
-            UIService.SafeInvoke(frm.TgDewpoint, Sub()
-                                                     frm.TgDewpoint.TempF = dewF
-                                                     frm.TgDewpoint.TempC = dewC
-                                                 End Sub)
+            UpdateControl(frm.TgDewpoint, Sub()
+                                              frm.TgDewpoint.TempF = dewF
+                                              frm.TgDewpoint.TempC = dewC
+                                          End Sub, useInvoke)
         End If
     End Sub
 
     ''' <summary>
     ''' Update wind-related controls
     ''' </summary>
-    Private Sub UpdateWindControls(frm As FrmMain, first As Ob)
+    Private Sub UpdateWindControls(frm As FrmMain, first As Ob, Optional useInvoke As Boolean = True)
         If first Is Nothing Then Return
 
         ' Wind direction
@@ -169,54 +219,56 @@ Friend Module TempestDataRoutines
             If frm.LblWindDir.Tag IsNot Nothing AndAlso TypeOf frm.LblWindDir.Tag Is String AndAlso frm.LblWindDir.Tag.ToString().Contains("{"c) Then
                 Dim tagFormat As String = frm.LblWindDir.Tag.ToString()
                 Dim textArgs As Object() = {winDir, UnitConversions.DegreesToCardinal(CInt(CDbl(winDir)))}
-                UIService.SafeSetTextFormat(frm.LblWindDir, tagFormat, textArgs)
+                SetControlTextFormat(frm.LblWindDir, tagFormat, textArgs, useInvoke)
+            Else
+                SetControlText(frm.LblWindDir, winDir, useInvoke)
             End If
         End If
 
         ' Wind speeds
         If first.wind_avg.HasValue Then
-            UpdateLabelWithFormat(frm.LblAvgWindSpd, first.wind_avg.Value)
+            UpdateLabelWithFormat(frm.LblAvgWindSpd, first.wind_avg.Value, useInvoke:=useInvoke)
         End If
 
         If first.wind_gust.HasValue Then
-            UpdateLabelWithFormat(frm.LblWindGust, first.wind_gust.Value)
+            UpdateLabelWithFormat(frm.LblWindGust, first.wind_gust.Value, useInvoke:=useInvoke)
         End If
 
         If first.wind_lull.HasValue Then
-            UpdateLabelWithFormat(frm.LblWindLull, first.wind_lull.Value)
+            UpdateLabelWithFormat(frm.LblWindLull, first.wind_lull.Value, useInvoke:=useInvoke)
         End If
     End Sub
 
     ''' <summary>
     ''' Update humidity control
     ''' </summary>
-    Private Sub UpdateHumidityControls(frm As FrmMain, first As Ob)
+    Private Sub UpdateHumidityControls(frm As FrmMain, first As Ob, Optional useInvoke As Boolean = True)
         If first Is Nothing OrElse Not first.relative_humidity.HasValue Then Return
         If frm.FgRH Is Nothing Then Return
 
         Dim rhValue As Integer = CInt(first.relative_humidity.Value)
-        UIService.SafeInvoke(frm.FgRH, Sub() frm.FgRH.Value = rhValue)
+        UpdateControl(frm.FgRH, Sub() frm.FgRH.Value = rhValue, useInvoke)
     End Sub
 
     ''' <summary>
     ''' Update rain minutes controls
     ''' </summary>
-    Private Sub UpdateRainMinutesControls(frm As FrmMain, first As Ob)
+    Private Sub UpdateRainMinutesControls(frm As FrmMain, first As Ob, Optional useInvoke As Boolean = True)
         If first Is Nothing Then Return
 
         If frm.TxtRainTodayMinutes IsNot Nothing Then
-            UIService.SafeSetText(frm.TxtRainTodayMinutes, CStr(If(first.precip_minutes_local_day, 0)))
+            SetControlText(frm.TxtRainTodayMinutes, CStr(If(first.precip_minutes_local_day, 0)), useInvoke)
         End If
 
         If frm.TxtRainYesterdayMinutes IsNot Nothing Then
-            UIService.SafeSetText(frm.TxtRainYesterdayMinutes, CStr(If(first.precip_minutes_local_yesterday_final, 0)))
+            SetControlText(frm.TxtRainYesterdayMinutes, CStr(If(first.precip_minutes_local_yesterday_final, 0)), useInvoke)
         End If
     End Sub
 
     ''' <summary>
     ''' Update pressure-related controls
     ''' </summary>
-    Private Sub UpdatePressureControls(frm As FrmMain, first As Ob)
+    Private Sub UpdatePressureControls(frm As FrmMain, first As Ob, Optional useInvoke As Boolean = True)
         If first Is Nothing Then Return
 
         ' Barometric pressure
@@ -224,73 +276,73 @@ Friend Module TempestDataRoutines
             If frm.LblBaroPress IsNot Nothing Then
                 Dim formatStr = If(frm.LblBaroPress.Tag, "").ToString()
                 If Not String.IsNullOrWhiteSpace(formatStr) AndAlso formatStr.Contains("{"c) Then
-                    UIService.SafeSetTextFormat(frm.LblBaroPress, formatStr, first.barometric_pressure.Value)
+                    SetControlTextFormat(frm.LblBaroPress, formatStr, New Object() {first.barometric_pressure.Value}, useInvoke)
                 Else
-                    UIService.SafeSetText(frm.LblBaroPress, first.barometric_pressure.Value.ToString())
+                    SetControlText(frm.LblBaroPress, first.barometric_pressure.Value.ToString(), useInvoke)
                 End If
             End If
         End If
 
         ' Pressure trend
         If Not String.IsNullOrEmpty(first.pressure_trend) Then
-            UpdateLabelWithFormat(frm.LblPressTrend, first.pressure_trend)
+            UpdateLabelWithFormat(frm.LblPressTrend, first.pressure_trend, useInvoke:=useInvoke)
         End If
     End Sub
 
     ''' <summary>
     ''' Update solar and UV controls
     ''' </summary>
-    Private Sub UpdateSolarControls(frm As FrmMain, first As Ob)
+    Private Sub UpdateSolarControls(frm As FrmMain, first As Ob, Optional useInvoke As Boolean = True)
         If first Is Nothing Then Return
 
         If first.uv.HasValue Then
-            UpdateLabelWithFormat(frm.LblUV, first.uv.Value)
+            UpdateLabelWithFormat(frm.LblUV, first.uv.Value, useInvoke:=useInvoke)
         End If
 
         If first.solar_radiation.HasValue Then
-            UpdateLabelWithFormat(frm.LblSolRad, first.solar_radiation.Value)
+            UpdateLabelWithFormat(frm.LblSolRad, first.solar_radiation.Value, useInvoke:=useInvoke)
         End If
 
         If first.brightness.HasValue Then
-            UpdateLabelWithFormat(frm.LblBrightness, first.brightness.Value)
+            UpdateLabelWithFormat(frm.LblBrightness, first.brightness.Value, useInvoke:=useInvoke)
         End If
 
         If first.air_density.HasValue Then
-            UpdateLabelWithFormat(frm.LblAirDensity, first.air_density.Value)
+            UpdateLabelWithFormat(frm.LblAirDensity, first.air_density.Value, useInvoke:=useInvoke)
         End If
     End Sub
 
     ''' <summary>
     ''' Update lightning-related controls
     ''' </summary>
-    Private Sub UpdateLightningControls(frm As FrmMain, first As Ob)
+    Private Sub UpdateLightningControls(frm As FrmMain, first As Ob, Optional useInvoke As Boolean = True)
         If first Is Nothing Then Return
 
         If frm.TxtStrikeCount IsNot Nothing Then
-            UIService.SafeSetText(frm.TxtStrikeCount, CStr(If(first.lightning_strike_count, 0)))
+            SetControlText(frm.TxtStrikeCount, CStr(If(first.lightning_strike_count, 0)), useInvoke)
         End If
 
         If frm.TxtLightHrCount IsNot Nothing Then
-            UIService.SafeSetText(frm.TxtLightHrCount, CStr(If(first.lightning_strike_count_last_1hr, 0)))
+            SetControlText(frm.TxtLightHrCount, CStr(If(first.lightning_strike_count_last_1hr, 0)), useInvoke)
         End If
 
         If frm.TxtLight3hrCount IsNot Nothing Then
-            UIService.SafeSetText(frm.TxtLight3hrCount, CStr(If(first.lightning_strike_count_last_3hr, 0)))
+            SetControlText(frm.TxtLight3hrCount, CStr(If(first.lightning_strike_count_last_3hr, 0)), useInvoke)
         End If
 
         If frm.TxtLightDistance IsNot Nothing Then
             Dim distKm As Integer = If(first.lightning_strike_last_distance, 0)
             Dim distMiles As Single = distKm * KmToMilesFactor
-            UIService.SafeSetText(frm.TxtLightDistance, distMiles.ToString("F1"))
+            SetControlText(frm.TxtLightDistance, distMiles.ToString("F1"), useInvoke)
         End If
 
         If frm.LblLightLastStrike IsNot Nothing Then
             If first.lightning_strike_last_epoch.HasValue AndAlso first.lightning_strike_last_epoch.Value > 0 Then
                 Dim lastStrike As DateTime = DateTimeOffset.FromUnixTimeSeconds(first.lightning_strike_last_epoch.Value).ToLocalTime().DateTime
                 Dim labelFormat As String = If(frm.LblLightLastStrike.Tag IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(frm.LblLightLastStrike.Tag.ToString()), frm.LblLightLastStrike.Tag.ToString(), "{0}")
-                UIService.SafeSetText(frm.LblLightLastStrike, String.Format(labelFormat, lastStrike.ToString("MMM d H:mm")))
+                SetControlText(frm.LblLightLastStrike, String.Format(labelFormat, lastStrike.ToString("MMM d H:mm")), useInvoke)
             Else
-                UIService.SafeSetText(frm.LblLightLastStrike, "Last Strike: N/A")
+                SetControlText(frm.LblLightLastStrike, "Last Strike: N/A", useInvoke)
             End If
         End If
     End Sub
@@ -298,12 +350,12 @@ Friend Module TempestDataRoutines
     ''' <summary>
     ''' Update timestamp control
     ''' </summary>
-    Private Sub UpdateTimestampControl(frm As FrmMain, first As Ob)
+    Private Sub UpdateTimestampControl(frm As FrmMain, first As Ob, Optional useInvoke As Boolean = True)
         If first Is Nothing OrElse Not first.timestamp.HasValue Then Return
         If frm.LblUpdate Is Nothing Then Return
 
         Dim dt As DateTime = DateTimeOffset.FromUnixTimeSeconds(first.timestamp.Value).ToLocalTime().DateTime
-        UIService.SafeSetText(frm.LblUpdate, String.Format(CStr(frm.LblUpdate.Tag), dt.ToString("MMMM d @ h:mm:ss tt")))
+        SetControlText(frm.LblUpdate, String.Format(CStr(frm.LblUpdate.Tag), dt.ToString("MMMM d @ h:mm:ss tt")), useInvoke)
     End Sub
 
     ''' <summary>

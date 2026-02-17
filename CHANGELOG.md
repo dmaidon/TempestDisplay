@@ -1,3 +1,4 @@
+Last Edit: February 17, 2026 (Populate log list optimization)
 # Changelog
 
 All notable changes to TempestDisplay will be documented in this file.
@@ -8,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 
 ## [Unreleased]
+
+### Changed - UI Update Batching (March 2026)
+- Batched station UI updates in `TempestDataRoutines` to reduce cross-thread invokes
+
+### Changed - UDP Raw Message Dispatch (March 2026)
+- Skip raw message dispatch when no subscribers are registered to reduce per-packet overhead
+
+### Changed - Logging Pipeline (March 2026)
+- Avoid queue writes after shutdown and reduce per-line locking in the log writer
+
+### Changed - UIService Marshaling (March 2026)
+- Skip handle creation during marshaling and ignore disposed controls to reduce UI overhead
+
+### Changed - Log List Population (February 2026)
+- Use `EnumerateFiles` for log list population to reduce allocations
+
+### Changed - LogService Init Wait (February 2026)
+- Use `SpinWait` for `AppStarts` readiness to avoid repeated sleeps
+
+### Changed - UDP Listener Cancellation (February 2026)
+- Link UDP listener cancellation token to the global application token
 
 ### Added - Performance & Code Quality Improvements (January 2025)
 

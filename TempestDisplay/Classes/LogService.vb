@@ -1,3 +1,4 @@
+' Last Edit: February 17, 2026 (Reduce logging overhead, avoid queue writes after shutdown, optimize init wait)
 Imports System.Collections.Concurrent
 Imports System.IO
 Imports System.Text
@@ -53,11 +54,7 @@ Public Class LogService
     End Sub
 
     Public Sub Init()
-        Dim waitMs As Integer = 0
-        While Globals.AppStarts <= 0 AndAlso waitMs < 2000
-            Threading.Thread.Sleep(50)
-            waitMs += 50
-        End While
+        Threading.SpinWait.SpinUntil(Function() Globals.AppStarts > 0, 2000)
         SyncLock _initLock
             If _initialized Then Return
 
@@ -117,14 +114,11 @@ Public Class LogService
     End Sub
 
     Private Sub ProcessQueueAsync()
+        Dim writer = _sw
         Try
             For Each line In _queue.GetConsumingEnumerable()
                 Try
-                    If _sw IsNot Nothing Then
-                        SyncLock _sw
-                            _sw.WriteLine(line)
-                        End SyncLock
-                    End If
+                    writer?.WriteLine(line)
                 Catch
                     ' swallow write exceptions to avoid crashing background task
                 End Try
@@ -133,11 +127,9 @@ Public Class LogService
             ' ignore
         Finally
             Try
-                If _sw IsNot Nothing Then
-                    SyncLock _sw
-                        _sw.Flush()
-                        _sw.Dispose()
-                    End SyncLock
+                If writer IsNot Nothing Then
+                    writer.Flush()
+                    writer.Dispose()
                 End If
             Catch
             End Try
@@ -155,7 +147,7 @@ Public Class LogService
     ''' Writes a log message with the specified level
     ''' </summary>
     Public Sub WriteLog(level As LogLevel, message As String)
-        If Not _initialized OrElse _queue Is Nothing Then Return
+        If Not _initialized OrElse _queue Is Nothing OrElse _queue.IsAddingCompleted Then Return
         If level < _minLogLevel Then Return
 
         Try

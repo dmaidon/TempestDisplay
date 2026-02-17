@@ -1,4 +1,4 @@
-' Last Edit: January 15, 2026 (Removed blocking File I/O, made events async, added statistics, optimized log checks, added timeout)
+' Last Edit: February 17, 2026 (Skip RawMessage dispatch when no subscribers, link cancellation token)
 Imports System.IO
 Imports System.Net
 Imports System.Net.Sockets
@@ -47,12 +47,29 @@ Public Class WeatherFlowUdpListener
 
     Public Event LightningStrikeReceived As EventHandler(Of LightningStrikeEventArgs)
 
-    Public Event RawMessageReceived As EventHandler(Of RawMessageEventArgs)
+    Private _rawMessageHandlers As EventHandler(Of RawMessageEventArgs)
+    Private _rawMessageHandlerCount As Integer
+
+    Public Custom Event RawMessageReceived As EventHandler(Of RawMessageEventArgs)
+        AddHandler(value As EventHandler(Of RawMessageEventArgs))
+            _rawMessageHandlers = DirectCast([Delegate].Combine(_rawMessageHandlers, value), EventHandler(Of RawMessageEventArgs))
+            Threading.Interlocked.Increment(_rawMessageHandlerCount)
+        End AddHandler
+        RemoveHandler(value As EventHandler(Of RawMessageEventArgs))
+            _rawMessageHandlers = DirectCast([Delegate].Remove(_rawMessageHandlers, value), EventHandler(Of RawMessageEventArgs))
+            Threading.Interlocked.Decrement(_rawMessageHandlerCount)
+        End RemoveHandler
+        RaiseEvent(sender As Object, e As RawMessageEventArgs)
+            Dim handlers = _rawMessageHandlers
+            If handlers Is Nothing Then Return
+            handlers.Invoke(sender, e)
+        End RaiseEvent
+    End Event
 
     Private _dailyLogTimer As Timer
 
     Public Sub New()
-        _cancellationTokenSource = New CancellationTokenSource()
+        _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(Globals.AppCancellationToken)
     End Sub
 
     ''' <summary>
@@ -178,8 +195,10 @@ Public Class WeatherFlowUdpListener
                         _lastLogCheck = DateTime.Now
                     End If
 
-                    ' Raise raw message event asynchronously (non-blocking) - intentionally not awaited
-                    Dim ignoredTask = Task.Run(Sub() RaiseEvent RawMessageReceived(Me, New RawMessageEventArgs(jsonMessage, remoteEP)))
+                    ' Raise raw message event asynchronously (non-blocking) - only when subscribers exist
+                    If Threading.Volatile.Read(_rawMessageHandlerCount) > 0 Then
+                        Dim ignoredTask = Task.Run(Sub() RaiseEvent RawMessageReceived(Me, New RawMessageEventArgs(jsonMessage, remoteEP)))
+                    End If
 
                     ' Parse and route the message
                     ParseAndRouteMessage(jsonMessage, remoteEP)

@@ -1,3 +1,4 @@
+Last Edit: February 17, 2026 (Documented additional optimization items)
 # Performance & Code Quality Improvements
 
 ## Overview
@@ -17,6 +18,12 @@ This document details the comprehensive performance and code quality improvement
 | **#2** | Font Caching & IDisposable | 4 controls | 60x performance boost |
 | **#3** | Layout Position Constants | 1 | Better maintainability |
 | **#4** | Property Change Thresholds | 3 controls | 50% fewer repaints |
+| **#5** | Station UI Batching | 1 module | Reduced cross-thread invokes |
+| **#6** | UDP Raw Message Dispatch | 1 module | Skips per-packet dispatch when unused |
+| **#7** | Logging Pipeline | 1 class | Lower overhead, safer shutdown |
+| **#8** | UI Marshaling | 1 class | Avoids handle creation |
+| **#9** | Log List Population | 1 form | Reduced allocations |
+| **#10** | Unified Cancellation | 1 class | Linked app shutdown token |
 
 **Total Files Modified:** 8  
 **Build Status:** ? Successful

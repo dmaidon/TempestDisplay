@@ -1,3 +1,4 @@
+Last Edit: February 17, 2026 (Documented recent performance optimizations)
 # TempestDisplay
 
 A professional Windows desktop application for displaying real-time weather data from WeatherFlow Tempest weather stations.
@@ -8,6 +9,14 @@ A professional Windows desktop application for displaying real-time weather data
 
 ## Features
 
+### Performance Optimizations
+- **Batched UI Updates** - Reduced cross-thread invokes during station updates
+- **UDP Raw Message Dispatch** - Skips per-packet dispatch when no subscribers
+- **Logging Pipeline** - Reduced locking and avoided queue writes after shutdown
+- **UI Marshaling** - Avoids handle creation and skips disposed controls
+- **Log List Population** - Uses `EnumerateFiles` to reduce allocations
+- **Unified Cancellation** - UDP listener linked to global app token
+
 ### Real-Time Weather Monitoring
 - **UDP Broadcast Listener** - Receives live data directly from your Tempest hub on your local network
 - **Instant Updates** - Wind data every 3 seconds, full observations every minute
@@ -15,7 +24,7 @@ A professional Windows desktop application for displaying real-time weather data
 
 ### Professional Custom Controls
 - **Temperature Gauges** - Current temperature, feels-like, and dew point displays
-- **Wind Rose** - 360° compass with color-coded wind speed indicator
+- **Wind Rose** - 360� compass with color-coded wind speed indicator
 - **Fan Gauge** - Semi-circular relative humidity display
 - **Precipitation Towers** - Visual rain accumulation for today, yesterday, month, year, and all-time
 - **Lightning Tracker** - Real-time lightning strike detection with distance
@@ -151,7 +160,7 @@ The main screen displays:
 - **Relative Humidity** - Percentage with semi-circular gauge
 
 #### Wind Section
-- **Wind Rose** - 360° compass showing wind direction and speed
+- **Wind Rose** - 360� compass showing wind direction and speed
   - Gray arrow: Calm (< 5 mph)
   - Blue arrow: Light wind (5-15 mph)
   - Gold arrow: Moderate wind (15-25 mph)
@@ -170,7 +179,7 @@ The main screen displays:
 
 #### Light & Solar Section
 - **UV Index** - Current UV level
-- **Solar Radiation** - W/m²
+- **Solar Radiation** - W/m�
 - **Brightness** - Lux reading
 
 #### Precipitation Section
@@ -225,7 +234,7 @@ TempestDisplay listens for UDP broadcasts on port **50222** from the Tempest hub
    - If it shows an IP address, you're receiving data
 
 2. **View Raw Messages**
-   - Go to **Logs** → **UDP History**
+   - Go to **Logs** ? **UDP History**
    - You should see JSON packets appearing in real-time
 
 3. **Check Windows Firewall**
@@ -282,47 +291,47 @@ TempestDisplay listens for UDP broadcasts on port **50222** from the Tempest hub
 
 ```
 TempestDisplay/
-├── TempestDisplay/                  # Main application
-│   ├── FrmMain.vb                  # Main form
-│   ├── FrmMain.Designer.vb         # Designer code
-│   ├── FrmMain.Partials/           # Partial classes
-│   │   ├── FrmMain.UdpListener.vb  # UDP event handlers
-│   │   ├── FrmMain.ObservationUI.vb # UI update methods
-│   │   └── FrmMain.Settings.vb     # Settings management
-│   ├── Modules/
-│   │   ├── UdpListener/            # UDP broadcast listener
-│   │   ├── DataFetch/              # Data retrieval routines
-│   │   ├── Settings/               # Settings management
-│   │   ├── Logs/                   # Logging system
-│   │   └── Weather/                # Weather calculations
-│   ├── Models/                     # Data models
-│   └── Classes/                    # Service classes
-├── TempestDisplay.Controls/         # Custom controls library
-│   └── Controls/
-│       ├── TempGaugeControl.vb     # Temperature gauge
-│       ├── FanGaugeControl.vb      # Humidity gauge
-│       ├── WindRoseControl.vb      # Wind compass
-│       └── PrecipTowersControl.vb  # Rain gauge
-└── TempestDisplay.Common/           # Shared utilities
-    └── Weather/
-        └── WeatherCalculations.vb  # Weather formulas
+??? TempestDisplay/                  # Main application
+?   ??? FrmMain.vb                  # Main form
+?   ??? FrmMain.Designer.vb         # Designer code
+?   ??? FrmMain.Partials/           # Partial classes
+?   ?   ??? FrmMain.UdpListener.vb  # UDP event handlers
+?   ?   ??? FrmMain.ObservationUI.vb # UI update methods
+?   ?   ??? FrmMain.Settings.vb     # Settings management
+?   ??? Modules/
+?   ?   ??? UdpListener/            # UDP broadcast listener
+?   ?   ??? DataFetch/              # Data retrieval routines
+?   ?   ??? Settings/               # Settings management
+?   ?   ??? Logs/                   # Logging system
+?   ?   ??? Weather/                # Weather calculations
+?   ??? Models/                     # Data models
+?   ??? Classes/                    # Service classes
+??? TempestDisplay.Controls/         # Custom controls library
+?   ??? Controls/
+?       ??? TempGaugeControl.vb     # Temperature gauge
+?       ??? FanGaugeControl.vb      # Humidity gauge
+?       ??? WindRoseControl.vb      # Wind compass
+?       ??? PrecipTowersControl.vb  # Rain gauge
+??? TempestDisplay.Common/           # Shared utilities
+    ??? Weather/
+        ??? WeatherCalculations.vb  # Weather formulas
 ```
 
 ### Data Flow
 
 ```
 Tempest Hub (UDP:50222)
-    ↓
+    ?
 WeatherFlowUdpListener
-    ↓
+    ?
 FrmMain.OnObservationReceived
-    ↓
+    ?
 ObservationParser.ParseObsStPacket
-    ↓
+    ?
 UpdateWeatherUI
-    ↓
+    ?
 [Individual Update Methods]
-    ↓
+    ?
 Custom Controls (WindRose, TempGauge, etc.)
 ```
 
@@ -365,7 +374,7 @@ dotnet test
 4. Add properties with `Browsable` attribute
 5. Build the Controls project
 6. Add control to `FrmMain.Designer.vb`
-7. Initialize in `FrmMain.vb` → `InitializeCustomControls()`
+7. Initialize in `FrmMain.vb` ? `InitializeCustomControls()`
 
 ### Code Style
 
@@ -462,6 +471,6 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ---
 
-**Made with ❤️ for weather enthusiasts**
+**Made with ?? for weather enthusiasts**
 
 For questions or feedback, please open an issue on GitHub.
