@@ -1,4 +1,4 @@
-' Last Edit: January 15, 2026 (Fixed async blocking, added timeouts, state tracking, parallel operations, performance metrics, proper error handling)
+' Last Edit: February 17, 2026 (Reset daily UV/solar peaks at midnight)
 Imports System.IO
 
 Friend Module MidnightRoutines
@@ -49,6 +49,25 @@ Friend Module MidnightRoutines
             Catch ex As Exception
                 Log.WriteException(ex, "PerformMidnightUpdate: Error resetting error count")
                 state.StepsFailed.Add("ErrorCountReset")
+            End Try
+
+            ' Step 1b: Reset daily UV/solar peak markers
+            Try
+                Dim frm = Application.OpenForms.Cast(Of Form)().OfType(Of FrmMain)().FirstOrDefault()
+                If frm IsNot Nothing AndAlso frm.SolarUvCombined IsNot Nothing Then
+                    UIService.SafeInvoke(frm.SolarUvCombined, Sub()
+                                                                frm.SolarUvCombined.UvPeak = 0.0F
+                                                                frm.SolarUvCombined.SolarPeak = 0.0F
+                                                            End Sub)
+                    Log.Write("PerformMidnightUpdate: Daily UV/Solar peaks reset")
+                    state.StepsCompleted.Add("UvSolarPeakReset")
+                Else
+                    Log.Write("PerformMidnightUpdate: UV/Solar peak reset skipped (control not available)")
+                    state.StepsFailed.Add("UvSolarPeakReset")
+                End If
+            Catch ex As Exception
+                Log.WriteException(ex, "PerformMidnightUpdate: Error resetting UV/Solar peaks")
+                state.StepsFailed.Add("UvSolarPeakReset")
             End Try
 
             ' Step 2 & 3: Close log files in parallel

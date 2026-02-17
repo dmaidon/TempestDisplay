@@ -1,4 +1,4 @@
-Last Edit: February 17, 2026 (Populate log list optimization)
+Last Edit: February 17, 2026 (Midnight UV/Solar peak reset)
 # Changelog
 
 All notable changes to TempestDisplay will be documented in this file.
@@ -30,6 +30,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed - UDP Listener Cancellation (February 2026)
 - Link UDP listener cancellation token to the global application token
+
+### Added - UV/Solar Peak Markers (February 2026)
+- Display daily peak markers for UV index and solar radiation in `SolarUvCombinedMeter`
+
+### Added - Midnight Peak Reset (February 2026)
+- Reset UV and solar peak markers during midnight maintenance
 
 ### Added - Performance & Code Quality Improvements (January 2025)
 

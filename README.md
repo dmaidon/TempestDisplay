@@ -1,4 +1,4 @@
-Last Edit: February 17, 2026 (Documented recent performance optimizations)
+Last Edit: February 17, 2026 (Documented UV/Solar daily peak reset)
 # TempestDisplay
 
 A professional Windows desktop application for displaying real-time weather data from WeatherFlow Tempest weather stations.
@@ -28,6 +28,8 @@ A professional Windows desktop application for displaying real-time weather data
 - **Fan Gauge** - Semi-circular relative humidity display
 - **Precipitation Towers** - Visual rain accumulation for today, yesterday, month, year, and all-time
 - **Lightning Tracker** - Real-time lightning strike detection with distance
+- **UV/Solar Meter** - Daily peak markers for UV index and solar radiation
+- **Daily Reset** - UV/Solar daily peaks reset at midnight
 
 ### Advanced Weather Calculations
 - **Air Density** - Calculated and categorized (Thin, Below Average, Average, Above Average, Dense)

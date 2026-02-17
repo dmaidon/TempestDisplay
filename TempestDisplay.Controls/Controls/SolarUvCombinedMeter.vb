@@ -1,4 +1,4 @@
-' Last Edit: February 17, 2026 (Add Last Edit header per repo guidelines)
+' Last Edit: February 17, 2026 (Add daily peak markers for UV and solar)
 Imports System.ComponentModel
 Imports System.Drawing
 Imports System.Drawing.Drawing2D
@@ -14,6 +14,7 @@ Public Class SolarUvCombinedMeter
 
     Private _uvPeak As Single
     Private _solarRadiation As Single
+    Private _solarPeak As Single
     Private _maxRadiation As Single = 1200.0F
     Private _showPeak As Boolean = True
 
@@ -101,7 +102,7 @@ Public Class SolarUvCombinedMeter
             ' Only invalidate if change exceeds threshold
             If Math.Abs(_uvIndex - clampedValue) < UV_CHANGE_THRESHOLD Then Return
             _uvIndex = clampedValue
-            If value > _uvPeak Then _uvPeak = value
+            If clampedValue > _uvPeak Then _uvPeak = clampedValue
             Invalidate()
         End Set
     End Property
@@ -136,6 +137,24 @@ Public Class SolarUvCombinedMeter
             ' Only invalidate if change exceeds threshold
             If Math.Abs(_solarRadiation - clampedValue) < SOLAR_CHANGE_THRESHOLD Then Return
             _solarRadiation = clampedValue
+            If clampedValue > _solarPeak Then _solarPeak = clampedValue
+            Invalidate()
+        End Set
+    End Property
+
+    <Browsable(True)>
+    <Category("Data")>
+    <DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)>
+    <DefaultValue(0.0F)>
+    Public Property SolarPeak As Single
+        Get
+            Return _solarPeak
+        End Get
+        Set(value As Single)
+            Dim clampedValue = Math.Max(0.0F, value)
+            ' Only invalidate if change exceeds threshold
+            If Math.Abs(_solarPeak - clampedValue) < SOLAR_CHANGE_THRESHOLD Then Return
+            _solarPeak = clampedValue
             Invalidate()
         End Set
     End Property
@@ -287,6 +306,12 @@ Public Class SolarUvCombinedMeter
         Dim pointerX As Integer = barRect.Left + CInt((_uvIndex / total) * barRect.Width)
         Dim bubbleR As Integer = Math.Max(CInt(barRect.Height * 0.35), 7)
 
+        ' Daily peak marker
+        Dim peakX As Integer = barRect.Left + CInt((_uvPeak / total) * barRect.Width)
+        Using peakPen As New Pen(Color.Black, 1.5F)
+            g.DrawLine(peakPen, peakX, barRect.Top, peakX, barRect.Bottom)
+        End Using
+
         ' Draw indicator with white outline for contrast
         Using outlinePen As New Pen(Color.White, 2.0F)
             g.DrawEllipse(outlinePen, pointerX - bubbleR, barRect.Top + (barRect.Height \ 2) - bubbleR, bubbleR * 2, bubbleR * 2)
@@ -345,8 +370,15 @@ Public Class SolarUvCombinedMeter
 
         ' Pointer - larger, more visible indicator
         Dim clamped = Math.Min(_maxRadiation, Math.Max(0.0F, _solarRadiation))
+        Dim clampedPeak = Math.Min(_maxRadiation, Math.Max(0.0F, _solarPeak))
         Dim pointerX As Integer = barRect.Left + CInt((clamped / _maxRadiation) * barRect.Width)
         Dim bubbleR As Integer = Math.Max(CInt(barRect.Height * 0.35), 7)
+
+        ' Daily peak marker
+        Dim peakX As Integer = barRect.Left + CInt((clampedPeak / _maxRadiation) * barRect.Width)
+        Using peakPen As New Pen(Color.Black, 1.5F)
+            g.DrawLine(peakPen, peakX, barRect.Top, peakX, barRect.Bottom)
+        End Using
 
         ' Draw indicator with white outline for contrast
         Using outlinePen As New Pen(Color.White, 2.0F)
