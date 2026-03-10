@@ -1,4 +1,4 @@
-Last Edit: February 17, 2026 (Documented UV/Solar daily peak reset)
+Last Edit: March 10, 2026 (Documented ApplicationEvents improvements)
 # TempestDisplay
 
 A professional Windows desktop application for displaying real-time weather data from WeatherFlow Tempest weather stations.
@@ -10,6 +10,10 @@ A professional Windows desktop application for displaying real-time weather data
 ## Features
 
 ### Performance Optimizations
+- **Early Folder Bootstrapping** - Application directories created in `ApplicationEvents.Startup` before the main form or `LogService` ever run
+- **DarkMode + HighDPI at Startup** - `ApplyApplicationDefaults` sets `SystemColorMode.System` and `HighDpiMode.SystemAware` application-wide
+- **Global Exception Net** - `UnhandledException` handler dual-logs via `LogService` and a standalone `crash.log` fallback
+- **Graceful Shutdown Net** - `Shutdown` handler cancels global `CancellationToken` as a safety net
 - **Batched UI Updates** - Reduced cross-thread invokes during station updates
 - **UDP Raw Message Dispatch** - Skips per-packet dispatch when no subscribers
 - **Logging Pipeline** - Reduced locking and avoided queue writes after shutdown
@@ -24,7 +28,7 @@ A professional Windows desktop application for displaying real-time weather data
 
 ### Professional Custom Controls
 - **Temperature Gauges** - Current temperature, feels-like, and dew point displays
-- **Wind Rose** - 360° compass with color-coded wind speed indicator
+- **Wind Rose** - 360Â° compass with color-coded wind speed indicator
 - **Fan Gauge** - Semi-circular relative humidity display
 - **Precipitation Towers** - Visual rain accumulation for today, yesterday, month, year, and all-time
 - **Lightning Tracker** - Real-time lightning strike detection with distance
@@ -162,7 +166,7 @@ The main screen displays:
 - **Relative Humidity** - Percentage with semi-circular gauge
 
 #### Wind Section
-- **Wind Rose** - 360° compass showing wind direction and speed
+- **Wind Rose** - 360Â° compass showing wind direction and speed
   - Gray arrow: Calm (< 5 mph)
   - Blue arrow: Light wind (5-15 mph)
   - Gold arrow: Moderate wind (15-25 mph)
@@ -181,7 +185,7 @@ The main screen displays:
 
 #### Light & Solar Section
 - **UV Index** - Current UV level
-- **Solar Radiation** - W/m²
+- **Solar Radiation** - W/mÂ²
 - **Brightness** - Lux reading
 
 #### Precipitation Section

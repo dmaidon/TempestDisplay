@@ -1,4 +1,4 @@
-' Last Edit: February 17, 2026 (Optimize log list population)
+' Last Edit: March 10, 2026 (REMOVED FolderRoutines.CreateAppFolders() — moved to ApplicationEvents.Startup)
 Imports System.ComponentModel
 Imports System.IO
 
@@ -23,9 +23,8 @@ Public Class FrmMain
 
         ' Apply initial location and increment AppStarts before any log file creation
         ApplyInitialFormLocation(Me)
-        ' FolderRoutines.CreateAppFolders() should remain before log creation
-        FolderRoutines.CreateAppFolders()
-        ' REMOVE redundant log file creation here
+        ' REMOVED: FolderRoutines.CreateAppFolders() — now called in ApplicationEvents.Startup
+        '          so directories exist before this form — and LogService.Init() — ever runs
         LogService.Instance.Init()
 
         ' Initialize UDP log

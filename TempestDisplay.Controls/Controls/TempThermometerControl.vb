@@ -28,6 +28,7 @@ Public Class TempThermometerControl
 
     ' Cached fonts for performance (avoid creating on every paint)
     Private _cachedLabelFont As Font
+
     Private _cachedScaleFont As Font
     Private _lastFontSize As Single = 0
 

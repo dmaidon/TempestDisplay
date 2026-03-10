@@ -1,4 +1,4 @@
-Last Edit: February 17, 2026 (Midnight UV/Solar peak reset)
+Last Edit: March 10, 2026 (ApplicationEvents: folder creation moved, DarkMode/HighDPI defaults, UnhandledException + Shutdown handlers)
 # Changelog
 
 All notable changes to TempestDisplay will be documented in this file.
@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 
 ## [Unreleased]
+
+### Changed - ApplicationEvents Bootstrap (March 10, 2026)
+- **MOVED** `FolderRoutines.CreateAppFolders()` from `FrmMain_Load` to `ApplicationEvents.Startup` so that `Logs\`, `Data\`, `Images\`, and `$Tmp\` all exist before the main form — and `LogService.Init()` — are ever invoked
+- **ADDED** `ApplyApplicationDefaults` handler: sets `ColorMode = SystemColorMode.System` (DarkMode) and `HighDpiMode = HighDpiMode.SystemAware` at the application level
+- **ADDED** `UnhandledException` handler: dual-path logging — routes through `LogService.Instance` when available, always writes a `crash.log` fallback; sets `ExitApplication = True`
+- **ADDED** `Shutdown` handler: safety-net that cancels `Globals.AppCancellationTokenSource` in case the form close path was bypassed
+- **FIXED** Name collision: inside `My` namespace `Log` resolves to `My.Application.Log` (VB Framework); now calls `LogService.Instance.WriteException` directly
 
 ### Changed - UI Update Batching (March 2026)
 - Batched station UI updates in `TempestDataRoutines` to reduce cross-thread invokes
@@ -57,9 +64,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### Property Change Thresholds
 - **Smart Invalidation**: Added minimum change thresholds to reduce unnecessary repaints
-  - `TempThermometerControl`: 0.1�F threshold
+  - `TempThermometerControl`: 0.1°F threshold
   - `HumidityComfortGauge`: 0.5% threshold
-  - `SolarUvCombinedMeter`: 0.1 UV index / 5.0 W/m� thresholds
+  - `SolarUvCombinedMeter`: 0.1 UV index / 5.0 W/m² thresholds
   - Reduces repaints by ~50% under typical sensor noise conditions
 
 #### Layout Management

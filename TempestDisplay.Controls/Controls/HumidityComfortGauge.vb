@@ -20,6 +20,7 @@ Public Class HumidityComfortGauge
 
     ' Cached fonts for performance (avoid creating on every paint)
     Private _cachedFont As Font
+
     Private _cachedSmallFont As Font
     Private _cachedLabelFont As Font
     Private _lastFontSize As Single = 0
@@ -154,7 +155,7 @@ Public Class HumidityComfortGauge
 
     Private Sub DrawComfortZones(g As Graphics, cx As Single, cy As Single, radius As Single)
         If Not _showComfortZones Then Return
-        
+
         ' Use static readonly array instead of creating new list every paint
         For Each zone In ComfortZones
             Dim startAngle = 180 + (zone.Start / 100) * 180
